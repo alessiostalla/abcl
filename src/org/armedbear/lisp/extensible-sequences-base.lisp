@@ -9,7 +9,7 @@
 
 (in-package :sequence)
 
-(shadow '(ELT LENGTH COUNT "COUNT-IF" "COUNT-IF-NOT"
+(shadow '("ELT" "LENGTH" "COUNT" "COUNT-IF" "COUNT-IF-NOT"
 	  "FIND" "FIND-IF" "FIND-IF-NOT"
 	  "POSITION" "POSITION-IF" "POSITION-IF-NOT"
 	  "SUBSEQ" "COPY-SEQ" "FILL"

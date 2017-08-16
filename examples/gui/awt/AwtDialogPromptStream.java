@@ -1,4 +1,4 @@
-// $Id$
+// $Id: AwtDialogPromptStream.java 12732 2010-05-25 13:00:59Z mevenson $
 
 package awt;
 

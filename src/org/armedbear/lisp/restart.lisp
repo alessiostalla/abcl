@@ -1,7 +1,7 @@
 ;;; restart.lisp
 ;;;
 ;;; Copyright (C) 2003-2005 Peter Graves
-;;; $Id$
+;;; $Id: restart.lisp 14950 2017-01-16 17:38:53Z mevenson $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License
@@ -249,6 +249,8 @@
                                                   (apply #'(lambda ,bvl ,@body)
                                                          ,temp-var)))))
                          data))))))
+
+
 
 (defmacro with-simple-restart ((restart-name format-string
                                              &rest format-arguments)

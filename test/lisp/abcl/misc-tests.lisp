@@ -1,7 +1,7 @@
 ;;; misc-tests.lisp
 ;;;
 ;;; Copyright (C) 2005 Peter Graves
-;;; $Id$
+;;; $Id: misc-tests.lisp 14857 2016-09-04 07:01:02Z mevenson $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License

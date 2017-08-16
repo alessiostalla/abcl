@@ -2,7 +2,7 @@
  * StackFrame.java
  *
  * Copyright (C) 2009 Mark Evenson
- * $Id$
+ * $Id: StackFrame.java 13462 2011-08-11 17:04:30Z ehuelsmann $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

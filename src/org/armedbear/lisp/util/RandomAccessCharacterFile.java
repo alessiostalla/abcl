@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2008 Hideo at Yokohama
  * Copyright (C) 2008-2009 Erik Huelsmann
- * $Id$
+ * $Id: RandomAccessCharacterFile.java 14863 2016-09-04 07:16:19Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

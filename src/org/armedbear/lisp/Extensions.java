@@ -2,7 +2,7 @@
  * Extensions.java
  *
  * Copyright (C) 2002-2007 Peter Graves
- * $Id$
+ * $Id: Extensions.java 14877 2016-09-29 21:38:59Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

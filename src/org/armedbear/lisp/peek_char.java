@@ -2,7 +2,7 @@
  * peek_char.java
  *
  * Copyright (C) 2004-2005 Peter Graves
- * $Id$
+ * $Id: peek_char.java 14211 2012-10-21 18:18:20Z ehuelsmann $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

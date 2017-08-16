@@ -2,7 +2,7 @@
  * StandardObject.java
  *
  * Copyright (C) 2003-2006 Peter Graves
- * $Id$
+ * $Id: StandardObject.java 14499 2013-05-15 06:45:13Z rschlatte $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

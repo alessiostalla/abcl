@@ -2,7 +2,7 @@
  * Main.java
  *
  * Copyright (C) 2008 Ville Voutilainen
- * $Id$
+ * $Id: Main.java 12908 2010-08-30 17:57:43Z vvoutilainen $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

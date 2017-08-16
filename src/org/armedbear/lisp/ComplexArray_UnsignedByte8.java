@@ -2,7 +2,7 @@
  * ComplexArray_UnsignedByte8.java
  *
  * Copyright (C) 2003-2005 Peter Graves
- * $Id$
+ * $Id: ComplexArray_UnsignedByte8.java 13443 2011-08-06 13:03:00Z ehuelsmann $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

@@ -1,7 +1,7 @@
 ;;; top-level.lisp
 ;;;
 ;;; Copyright (C) 2003-2006 Peter Graves
-;;; $Id$
+;;; $Id: top-level.lisp 14105 2012-08-17 08:50:58Z ehuelsmann $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License
@@ -44,11 +44,13 @@
   "Number of the next command")
 
 (defun prompt-package-name ()
-  (let ((result (package-name *package*)))
-    (dolist (nickname (package-nicknames *package*))
-      (when (< (length nickname) (length result))
-        (setf result nickname)))
-    result))
+  (if (packagep *package*)
+    (let ((result (package-name *package*)))
+      (dolist (nickname (package-nicknames *package*))
+        (when (< (length nickname) (length result))
+          (setf result nickname)))
+      result)
+    "(*package* is not a package, using a safe prompt)"))
 
 (defun repl-prompt-fun (stream)
   (fresh-line stream)
@@ -373,10 +375,11 @@
   (let ((c (peek-char-non-whitespace stream)))
     (cond ((eql c *command-char*)
            (let* ((input (read-line stream))
-		  (name (symbol-name (read-from-string input))))
+		  (symbol (read-from-string input))
+		  (name (symbol-name symbol)))
 	     (if (find-command name)
 		 (progn (process-cmd input) *handled-cmd*)
-	       (read-from-string (concatenate 'string ":" name)))))
+	       symbol)))
           ((eql c #\newline)
            (read-line stream)
            *null-cmd*)
@@ -428,3 +431,9 @@
               (repl)
             (stream-error (c) (declare (ignore c)) (return-from top-level-loop)))
           (repl)))))
+
+(defun ext:CL-W/HIERARCHICAL-SYMBOLS ()
+  (let ((readtable (copy-readtable)))
+    (setf *package* (symbol:|as-package| :|common-lisp-w/hsymbols-user|))
+    (setf (readtable-case *readtable*) :preserve)
+    readtable))

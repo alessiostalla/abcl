@@ -1,7 +1,7 @@
 ;;; package.lisp
 ;;;
 ;;; Copyright (C) 2008 Erik Huelsmann
-;;; $Id$
+;;; $Id: package.lisp 14431 2013-03-10 15:52:36Z rschlatte $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License
@@ -117,3 +117,25 @@
               local-nickname package-designator actual-package))
     (sys::%add-package-local-nickname local-nickname actual-package
                                       package-designator)))
+
+;;Hierarchical symbols
+(defun symbol:|import| (symbol &key (namespace *package*) (name (symbol-name symbol)))
+  (let* ((ns (cond
+               ((symbolp namespace) namespace)
+               ((packagep namespace) (package:|symbol| namespace))
+               (t (error 'type-error :datum namespace :expected-type '(or symbol package)))))
+         (local-sym (symbol:|find| name ns)))
+    (restart-case
+        (progn
+          (when (and local-sym (not (eql symbol local-sym)))
+            (error 'package-error
+                   "A different symbol (~A) is already accessible in symbol ~A with the same name (~A)."
+                    local-sym (symbol-name ns) name))
+          (symbol::%import symbol ns name))
+      (remove-existing ()
+        :report (lambda (s) (format s "Remove ~S from ~S and continue" local-sym ns))
+        (symbol:|remove-alias| ns name)
+        (symbol::%import symbol ns name))
+      (do-nothing ()
+        :report "Do nothing")))
+  symbol)

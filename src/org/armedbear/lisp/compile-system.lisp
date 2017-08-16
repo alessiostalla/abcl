@@ -1,7 +1,7 @@
 ;;; compile-system.lisp
 ;;;
 ;;; Copyright (C) 2004-2008 Peter Graves
-;;; $Id$
+;;; $Id: compile-system.lisp 14931 2016-12-27 20:06:20Z mevenson $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License
@@ -207,7 +207,8 @@
           (macs (filter-combos (load-combos (symbols-pathspec "*.macs"))))
           (setf-functions (filter-setf-combos (load-combos (symbols-pathspec "*.setf-functions"))))
           (setf-expanders (filter-setf-combos (load-combos (symbols-pathspec "*.setf-expanders"))))
-          (exps (filter-combos (load-combos (symbols-pathspec "*.exps")))))
+          (exps (filter-combos (load-combos (symbols-pathspec "*.exps"))))
+          (sys::*double-colon-package-separators* t))
       (with-open-file (f (symbols-pathspec "autoloads-gen.lisp")
                          :direction :output :if-does-not-exist :create
                          :if-exists :supersede)

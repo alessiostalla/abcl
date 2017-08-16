@@ -1,7 +1,7 @@
 ;;; format.lisp
 ;;;
 ;;; Copyright (C) 2004-2007 Peter Graves
-;;; $Id$
+;;; $Id: format.lisp 14801 2015-09-13 09:54:59Z mevenson $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License

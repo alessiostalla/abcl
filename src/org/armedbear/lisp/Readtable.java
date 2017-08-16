@@ -2,7 +2,7 @@
  * Readtable.java
  *
  * Copyright (C) 2003-2007 Peter Graves
- * $Id$
+ * $Id: Readtable.java 14448 2013-03-27 10:29:58Z rschlatte $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

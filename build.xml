@@ -1071,6 +1071,9 @@ ${basedir}/../cl-bench
         <!-- Increase the size of the space used to store JVM class metadata. -->
         <jvmarg value="-XX:MaxPermSize=768m"/> 
 
+	<!-- Enable debugger on port 5005 -->
+	<jvmarg value="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005" />
+
         <arg value="--noinit"/> 
         <arg value="--eval"/><arg value="(require (quote asdf))"/>
         <arg value="--eval"/>

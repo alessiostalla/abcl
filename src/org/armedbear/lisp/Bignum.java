@@ -2,7 +2,7 @@
  * Bignum.java
  *
  * Copyright (C) 2003-2007 Peter Graves
- * $Id$
+ * $Id: Bignum.java 14757 2015-04-11 07:44:42Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

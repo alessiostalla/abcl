@@ -2,7 +2,7 @@
 ;;;
 ;;; Copyright (C) 2003-2008 Peter Graves
 ;;; Copyright (C) 2008 Ville Voutilainen
-;;; $Id$
+;;; $Id: compiler-pass2.lisp 14951 2017-01-17 07:17:46Z mevenson $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License
@@ -926,15 +926,19 @@ representation, based on the derived type of the LispObject."
 (defun check-min-args (form n)
   (check-number-of-args form n t))
 
-
+(defun dump-symbol (symbol)
+  #|(emit 'ldc (pool-string (symbol-name (truly-the symbol lambda-name))))
+             (emit 'ldc (pool-string (package-name (symbol-package (truly-the symbol lambda-name)))))
+             (emit-invokestatic +lisp+ "internInPackage"
+                                (list +java-string+ +java-string+)
+                                +lisp-symbol+)|#
+  (let ((*print-readably* t) (*package* (find-package :cl)))
+    (emit 'ldc (pool-string (write-to-string (truly-the symbol symbol))))
+    (emit-invokestatic +lisp+ "reconstructSymbol" (list +java-string+) +lisp-symbol+)))
 
 (defun emit-constructor-lambda-name (lambda-name)
   (cond ((and lambda-name (symbolp lambda-name) (symbol-package (truly-the symbol lambda-name)))
-         (emit 'ldc (pool-string (symbol-name (truly-the symbol lambda-name))))
-         (emit 'ldc (pool-string (package-name (symbol-package (truly-the symbol lambda-name)))))
-         (emit-invokestatic +lisp+ "internInPackage"
-                            (list +java-string+ +java-string+)
-                            +lisp-symbol+))
+         (dump-symbol lambda-name))
         (t
          ;; No name.
          (emit-push-nil))))
@@ -1012,13 +1016,7 @@ representation, based on the derived type of the LispObject."
                        (emit-invokestatic +lisp+ "internKeyword"
                                           (list +java-string+) +lisp-symbol+))
                      ;; symbol is not really a keyword; yes, that's allowed!
-                     (progn
-                       (emit 'ldc (pool-string (symbol-name keyword)))
-                       (emit 'ldc (pool-string
-                                   (package-name (symbol-package keyword))))
-                       (emit-invokestatic +lisp+ "internInPackage"
-                                          (list +java-string+ +java-string+)
-                                          +lisp-symbol+))))
+                     (dump-symbol keyword)))
                (emit-invokespecial-init +alp-keyword-parameter+
                                         (list :boolean +lisp-object+
                                               +lisp-symbol+))))))
@@ -1264,11 +1262,7 @@ of the other types."
        (emit-invokestatic +lisp+ "internKeyword"
                           (list +java-string+) +lisp-symbol+))
       (t
-       (emit 'ldc (pool-string (symbol-name symbol)))
-       (emit 'ldc (pool-string (package-name (symbol-package symbol))))
-       (emit-invokestatic +lisp+ "internInPackage"
-                          (list +java-string+ +java-string+)
-                          +lisp-symbol+)))))
+       (dump-symbol symbol)))))
 
 (defvar serialization-table
   `((integer "INT" ,#'eql ,#'serialize-integer ,+lisp-integer+)
@@ -7419,7 +7413,8 @@ generated class."
       (princ "; in " *error-output*)
       (let ((*print-length* 2)
             (*print-level* 2)
-            (*print-pretty* nil))
+            (*print-pretty* nil)
+            (*print-readably* nil))
         (prin1 context *error-output*))
       (terpri *error-output*)
       (terpri *error-output*)

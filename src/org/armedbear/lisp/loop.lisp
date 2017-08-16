@@ -1,7 +1,7 @@
 ;;; loop.lisp
 ;;;
 ;;; Copyright (C) 2004-2007 Peter Graves
-;;; $Id$
+;;; $Id: loop.lisp 14355 2013-01-16 10:45:54Z mevenson $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License

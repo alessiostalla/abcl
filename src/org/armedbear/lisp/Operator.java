@@ -2,7 +2,7 @@
  * Operator.java
  *
  * Copyright (C) 2003-2005 Peter Graves
- * $Id$
+ * $Id: Operator.java 12826 2010-07-25 19:09:13Z vvoutilainen $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

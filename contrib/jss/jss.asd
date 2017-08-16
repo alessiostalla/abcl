@@ -5,8 +5,7 @@
   :author "Alan Ruttenberg, Mark Evenson"
   :long-description "<urn:abcl.org/release/1.5.0/contrib/jss#>"
   :version "3.2.3" 
-  :components ((:module base 
-                        :pathname "" :serial t 
+  :components ((:module base :pathname "" :serial t 
                         :components ((:file "packages")
                                      (:file "invoke")
                                      (:file "collections")

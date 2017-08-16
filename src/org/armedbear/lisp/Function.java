@@ -2,7 +2,7 @@
  * Function.java
  *
  * Copyright (C) 2002-2005 Peter Graves
- * $Id$
+ * $Id: Function.java 14957 2017-01-18 07:24:47Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -117,9 +117,9 @@ public abstract class Function extends Operator
             setLambdaList(new SimpleString(arglist));
         if (name != null) {
             Symbol symbol;
-            if (exported)
+            if (exported) {
                 symbol = pkg.internAndExport(name.toUpperCase());
-            else
+            } else
                 symbol = pkg.intern(name.toUpperCase());
             symbol.setSymbolFunction(this);
             if (cold)

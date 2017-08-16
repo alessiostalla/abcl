@@ -2,7 +2,7 @@
  * ItemListener.java
  *
  * Copyright (C) 2003-2005 Peter Graves
- * $Id$
+ * $Id: ItemListener.java 12731 2010-05-25 12:42:15Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

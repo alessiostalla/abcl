@@ -1,7 +1,7 @@
 ;;; boot.lisp
 ;;;
 ;;; Copyright (C) 2003-2007 Peter Graves <peter@armedbear.org>
-;;; $Id$
+;;; $Id: boot.lisp 14036 2012-08-01 11:53:36Z ehuelsmann $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License
@@ -171,6 +171,7 @@
   (values (if name name definition) nil nil))
 
 (load-system-file "inline")
+(load-system-file "make-hash-table")
 (load-system-file "proclaim")
 (load-system-file "arrays")
 (load-system-file "compiler-macro")
@@ -181,13 +182,18 @@
 (load-system-file "require")
 ;; precompiler has a large performance benefit on interpreted code
 ;; load as early as possible
+(load-system-file "source-transform")
 (load-system-file "precompiler")
+(load-system-file "adjoin")
+(load-system-file "strings")
 (load-system-file "extensible-sequences-base")
 (load-system-file "sequences")
 (load-system-file "error")
 (load-system-file "defpackage")
 (load-system-file "define-modify-macro")
 (load-system-file "defstruct")
+(load-system-file "concatenate")
+(load-system-file "make-string")
 
 ;; The actual stream and system-stream classes
 ;; are created in BuiltInClass.java, however, that code does not
@@ -200,10 +206,19 @@
                           (:constructor nil)
                           (:copier nil)))
 
-(load-system-file "restart")
-(load-system-file "late-setf")
+(load-system-file "assoc")
+(load-system-file "ldiff")
+(load-system-file "with-standard-io-syntax")
 (load-system-file "debug")
+(load-system-file "map1")
+(load-system-file "sets")
+(load-system-file "late-setf")
+(load-system-file "print-unreadable-object")
+(load-system-file "assert")
 (load-system-file "print")
+(load-system-file "with-output-to-string")
+(load-system-file "pprint")
+(load-system-file "restart")
 (load-system-file "pprint-dispatch")
 (load-system-file "defsetf")
 (load-system-file "package")

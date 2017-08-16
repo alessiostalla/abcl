@@ -1,7 +1,7 @@
 ;;; featurep.lisp
 ;;;
 ;;; Copyright (C) 2005 Peter Graves
-;;; $Id$
+;;; $Id: featurep.lisp 14879 2016-09-29 21:39:05Z mevenson $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License

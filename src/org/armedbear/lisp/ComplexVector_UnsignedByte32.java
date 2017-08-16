@@ -2,7 +2,7 @@
  * ComplexVector_UnsignedByte32.java
  *
  * Copyright (C) 2002-2005 Peter Graves
- * $Id$
+ * $Id: ComplexVector_UnsignedByte32.java 14466 2013-04-24 12:50:40Z rschlatte $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

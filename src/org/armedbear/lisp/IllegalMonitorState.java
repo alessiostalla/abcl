@@ -2,7 +2,7 @@
  * IllegalMonitorState.java
  *
  * Copyright (C) 2002-2005 Peter Graves
- * $Id$
+ * $Id: IllegalMonitorState.java 13540 2011-08-27 23:23:05Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

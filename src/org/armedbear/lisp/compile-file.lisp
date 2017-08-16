@@ -2,7 +2,7 @@
 ;;; compile-file.lisp
 ;;;
 ;;; Copyright (C) 2004-2006 Peter Graves
-;;; $Id$
+;;; $Id: compile-file.lisp 14915 2016-11-24 10:31:24Z mevenson $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License
@@ -136,7 +136,8 @@ zero-length jvm classfile corresponding to ~A." classfile)
     (princ "; ")
     (let ((*print-length* 2)
           (*print-level* 2)
-          (*print-pretty* nil))
+          (*print-pretty* nil)
+          (*print-readably* nil))
       (prin1 form))
     (terpri)))
 
@@ -150,7 +151,7 @@ zero-length jvm classfile corresponding to ~A." classfile)
 (defun finalize-fasl-output ()
   (when *binary-fasls*
     (let ((*package* (find-package :keyword))
-          (*double-colon-package-separators* T))
+          (*print-readably* t))
       (dump-form (convert-toplevel-form (list* 'PROGN
                                                (nreverse *forms-for-output*))
                                         t)
@@ -650,6 +651,8 @@ interpreted toplevel form, non-NIL if it is 'simple enough'."
                 (SHADOW precompile-toplevel-form)
                 (%SET-FDEFINITION precompile-toplevel-form)
                 (MOP::ENSURE-METHOD process-toplevel-mop.ensure-method)
+                (symbol:|define-namespace| process-toplevel-defpackage/in-package)
+                (:|common-lisp-w/hsymbols|:|in-namespace| process-toplevel-defpackage/in-package)
 		(record-source-information-for-type process-record-source-information)))
   (install-toplevel-handler (car pair) (cadr pair)))
 
@@ -779,6 +782,7 @@ interpreted toplevel form, non-NIL if it is 'simple enough'."
 (defvar *binary-fasls* nil)
 (defvar *forms-for-output* nil)
 (defvar *fasl-stream* nil)
+(defpackage #:fasl-package)
 
 (defun compile-from-stream (in output-file temp-file temp-file2
                             extract-toplevel-funcs-and-macros
@@ -805,6 +809,7 @@ interpreted toplevel form, non-NIL if it is 'simple enough'."
               (*read-default-float-format* *read-default-float-format*)
               (*read-base* *read-base*)
               (*package* *package*)
+              (*print-readably* t)
               (jvm::*functions-defined-in-current-file* '())
               (*fbound-names* '())
               (*fasl-stream* out)
@@ -910,7 +915,7 @@ interpreted toplevel form, non-NIL if it is 'simple enough'."
                                :if-does-not-exist :create
                                :if-exists :supersede
                                :external-format *fasl-external-format*)
-            (let ((*package* (find-package '#:cl))
+            (let ((*package* (find-package '#:fasl-package))
                   (*print-fasl* t)
                   (*print-array* t)
                   (*print-base* 10)

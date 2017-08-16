@@ -2,7 +2,7 @@
  * Nil.java
  *
  * Copyright (C) 2002-2006 Peter Graves
- * $Id$
+ * $Id: Nil.java 14903 2016-10-15 12:41:27Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

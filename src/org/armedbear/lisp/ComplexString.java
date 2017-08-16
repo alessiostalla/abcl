@@ -2,7 +2,7 @@
  * ComplexString.java
  *
  * Copyright (C) 2002-2007 Peter Graves
- * $Id$
+ * $Id: ComplexString.java 13720 2012-01-05 21:56:44Z ehuelsmann $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

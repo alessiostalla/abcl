@@ -2,7 +2,7 @@
  * JHandler.java
  *
  * Copyright (C) 2003-2005 Andras Simon, Peter Graves
- * $Id$
+ * $Id: JHandler.java 13461 2011-08-11 17:01:41Z ehuelsmann $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

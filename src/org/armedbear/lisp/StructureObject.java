@@ -2,7 +2,7 @@
  * StructureObject.java
  *
  * Copyright (C) 2003-2006 Peter Graves
- * $Id$
+ * $Id: StructureObject.java 13541 2011-08-27 23:23:24Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

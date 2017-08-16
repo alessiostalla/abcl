@@ -2,7 +2,7 @@
  * Autoload.java
  *
  * Copyright (C) 2003-2006 Peter Graves
- * $Id$
+ * $Id: Autoload.java 14840 2015-11-09 10:59:10Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -690,5 +690,7 @@ public class Autoload extends Function
         autoload(PACKAGE_EXT, "autoload-setf-expander", "AutoloadGeneralizedReference", true);
         autoload(PACKAGE_EXT, "autoload-setf-function", "AutoloadGeneralizedReference", true);
         autoload(PACKAGE_EXT, "autoload-ref-p", "AutoloadGeneralizedReference", true);
+
+        autoload(Symbol.CL_WITH_HSYMBOLS.asPackage(), "in-namespace", "Primitives", true);
     }
 }

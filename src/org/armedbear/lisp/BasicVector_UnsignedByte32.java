@@ -2,7 +2,7 @@
  * BasicVector_UnsignedByte32.java
  *
  * Copyright (C) 2002-2006 Peter Graves
- * $Id$
+ * $Id: BasicVector_UnsignedByte32.java 12588 2010-04-10 17:17:08Z vvoutilainen $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

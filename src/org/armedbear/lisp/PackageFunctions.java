@@ -2,7 +2,7 @@
  * PackageFunctions.java
  *
  * Copyright (C) 2003-2005 Peter Graves
- * $Id$
+ * $Id: PackageFunctions.java 14431 2013-03-10 15:52:36Z rschlatte $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -266,7 +266,7 @@ public final class PackageFunctions
         @Override
         public LispObject execute()
         {
-            return Packages.listAllPackages();
+            return Packages.listAllTopLevelPackages();
         }
     };
 
@@ -343,7 +343,7 @@ public final class PackageFunctions
         {
             if (args.length != 11)
                 return error(new WrongNumberOfArgumentsException(this, 11));
-            final String packageName = args[0].getStringValue();
+            Symbol symbol = checkSymbol(args[0]);
             Package currentpkg = getCurrentPackage();
             LispObject nicknames = checkList(args[1]);
             // FIXME size is ignored
@@ -357,9 +357,9 @@ public final class PackageFunctions
             LispObject localNicknames = checkList(args[9]);
             // FIXME docString is ignored
             // LispObject docString = args[10];
-            Package pkg = currentpkg.findPackage(packageName);
-            if (pkg != null)
-                return pkg;
+            if (symbol.isPackage())
+                return symbol.asPackage();
+            Package pkg = symbol.asPackage();
             if (nicknames != NIL) {
                 LispObject list = nicknames;
                 while (list != NIL) {
@@ -371,7 +371,6 @@ public final class PackageFunctions
                     list = list.cdr();
                 }
             }
-            pkg = Packages.createPackage(packageName);
             while (nicknames != NIL) {
                 LispObject string = nicknames.car().STRING();
                 pkg.addNickname(string.getStringValue());
@@ -408,7 +407,7 @@ public final class PackageFunctions
                     Package p = currentpkg.findPackage(string.getStringValue());
                     if (p == null)
                         return error(new LispError(obj.princToString() +
-                                                    " is not the name of a package."));
+                                                    " is not the name of a package. 1"));
                     pkg.usePackage(p);
                 }
                 use = use.cdr();

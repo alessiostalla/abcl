@@ -1,7 +1,7 @@
 ;;; load.lisp
 ;;;
 ;;; Copyright (C) 2004-2005 Peter Graves
-;;; $Id$
+;;; $Id: load.lisp 14402 2013-02-26 14:53:57Z mevenson $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License
@@ -54,3 +54,15 @@
 				     filespec
 				     (merge-pathnames (pathname filespec)))
 				 verbose print if-does-not-exist external-format)))
+
+#+nil
+(defun |common-lisp-w/hsymbols|:|load|
+    (filespec
+     &key
+     (verbose *load-verbose*)
+     (print *load-print*)
+     (if-does-not-exist t)
+     (external-format :default))
+  (let ((*readtable* (copy-readtable)))
+    (setf (readtable-case *readtable*) :preserve)
+    (load filespec :verbose verbose :print print :if-does-not-exist if-does-not-exist :external-format external-format)))

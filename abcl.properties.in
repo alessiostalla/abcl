@@ -1,4 +1,4 @@
-# $Id$
+# $Id: abcl.properties.in 14866 2016-09-04 12:21:00Z mevenson $
 
 # XXX should be called 'build.properties' but this collides with its
 #     usage by the Eclipe IDE

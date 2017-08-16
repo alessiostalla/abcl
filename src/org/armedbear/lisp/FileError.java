@@ -2,7 +2,7 @@
  * FileError.java
  *
  * Copyright (C) 2004-2005 Peter Graves
- * $Id$
+ * $Id: FileError.java 12469 2010-02-14 09:07:54Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

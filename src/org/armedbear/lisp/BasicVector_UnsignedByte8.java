@@ -2,7 +2,7 @@
  * BasicVector_UnsignedByte8.java
  *
  * Copyright (C) 2002-2006 Peter Graves
- * $Id$
+ * $Id: BasicVector_UnsignedByte8.java 13708 2011-12-20 22:04:33Z ehuelsmann $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

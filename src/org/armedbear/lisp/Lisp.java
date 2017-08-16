@@ -2,7 +2,7 @@
  * Lisp.java
  *
  * Copyright (C) 2002-2007 Peter Graves <peter@armedbear.org>
- * $Id$
+ * $Id: Lisp.java 14552 2013-06-18 19:20:51Z ehuelsmann $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -33,16 +33,10 @@
 
 package org.armedbear.lisp;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.io.StringReader;
+import java.io.*;
 import java.math.BigInteger;
 import java.net.URL;
 import java.nio.charset.Charset;
-import java.util.Hashtable;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class Lisp
@@ -53,47 +47,29 @@ public final class Lisp
 
   public static boolean initialized;
 
-  // Packages.
-  public static final Package PACKAGE_CL =
-    Packages.createPackage("COMMON-LISP", 2048); // EH 10-10-2010: Actual number = 1014
-  public static final Package PACKAGE_CL_USER =
-    Packages.createPackage("COMMON-LISP-USER", 1024);
-  public static final Package PACKAGE_KEYWORD =
-    Packages.createPackage("KEYWORD", 1024);
-  public static final Package PACKAGE_SYS =
-    Packages.createPackage("SYSTEM", 2048); // EH 10-10-2010: Actual number = 1216
-  public static final Package PACKAGE_MOP =
-    Packages.createPackage("MOP", 512); // EH 10-10-2010: Actual number = 277
-  public static final Package PACKAGE_TPL =
-    Packages.createPackage("TOP-LEVEL", 128); // EH 10-10-2010: Actual number = 6
-  public static final Package PACKAGE_EXT =
-    Packages.createPackage("EXTENSIONS", 256); // EH 10-10-2010: Actual number = 131
-  public static final Package PACKAGE_JVM =
-    Packages.createPackage("JVM", 2048); // EH 10-10-2010: Actual number = 1518
-  public static final Package PACKAGE_LOOP =
-    Packages.createPackage("LOOP", 512); // EH 10-10-2010: Actual number = 305
-  public static final Package PACKAGE_PROF =
-    Packages.createPackage("PROFILER");
-  public static final Package PACKAGE_JAVA =
-    Packages.createPackage("JAVA");
-  public static final Package PACKAGE_LISP =
-    Packages.createPackage("LISP");
-  public static final Package PACKAGE_THREADS =
-    Packages.createPackage("THREADS");
-  public static final Package PACKAGE_FORMAT =
-    Packages.createPackage("FORMAT");
-  public static final Package PACKAGE_XP =
-    Packages.createPackage("XP");
-  public static final Package PACKAGE_PRECOMPILER =
-    Packages.createPackage("PRECOMPILER");
-  public static final Package PACKAGE_SEQUENCE =
-    Packages.createPackage("SEQUENCE", 128); // EH 10-10-2010: Actual number 62
-
+  // Packages (legacy)
+  public static final Package PACKAGE_CL = Symbol.PACKAGE_CL;
+  public static final Package PACKAGE_CL_USER = Symbol.PACKAGE_CL_USER;
+  public static final Package PACKAGE_KEYWORD = Symbol.PACKAGE_KEYWORD;
+  public static final Package PACKAGE_SYS = Symbol.PACKAGE_SYS;
+  public static final Package PACKAGE_MOP = Symbol.PACKAGE_MOP;
+  public static final Package PACKAGE_TPL = Symbol.PACKAGE_TPL;
+  public static final Package PACKAGE_EXT = Symbol.PACKAGE_EXT;
+  public static final Package PACKAGE_JVM = Symbol.PACKAGE_JVM;
+  public static final Package PACKAGE_LOOP = Symbol.PACKAGE_LOOP;
+  public static final Package PACKAGE_PROF = Symbol.PACKAGE_PROF;
+  public static final Package PACKAGE_JAVA = Symbol.PACKAGE_JAVA;
+  public static final Package PACKAGE_LISP = Symbol.PACKAGE_LISP;
+  public static final Package PACKAGE_THREADS = Symbol.PACKAGE_THREADS;
+  public static final Package PACKAGE_FORMAT = Symbol.PACKAGE_FORMAT;
+  public static final Package PACKAGE_XP = Symbol.PACKAGE_XP;
+  public static final Package PACKAGE_PRECOMPILER = Symbol.PACKAGE_PRECOMPILER;
+  public static final Package PACKAGE_SEQUENCE = Symbol.PACKAGE_SEQUENCE;
 
   @DocString(name="nil")
   public static final Symbol NIL = Nil.NIL;
 
-  // We need NIL before we can call usePackage().
+  // We need NIL before we can call useNamespace().
   static
   {
     PACKAGE_CL.addNickname("CL");
@@ -136,6 +112,15 @@ public final class Lisp
     PACKAGE_PRECOMPILER.usePackage(PACKAGE_EXT);
     PACKAGE_PRECOMPILER.usePackage(PACKAGE_SYS);
     PACKAGE_SEQUENCE.usePackage(PACKAGE_CL);
+
+    //Hierarchical symbols
+      Symbol.CL_WITH_HSYMBOLS.asPackage();
+      Symbol.CL_WITH_HSYMBOLS_USER.asPackage();
+    for(Symbol s : PACKAGE_CL.getAccessibleSymbols()) {
+          Symbol.CL_WITH_HSYMBOLS.importSymbol(s, new SimpleString(s.getName().toLowerCase()));
+          Symbol.CL_WITH_HSYMBOLS.export(s);
+    }
+    Symbol.CL_WITH_HSYMBOLS_USER.useNamespace(Symbol.CL_WITH_HSYMBOLS);
   }
 
   // End-of-file marker.
@@ -1666,7 +1651,10 @@ public final class Lisp
 
   {
           if (obj instanceof Package)     
-                  return (Package) obj;         
+                  return (Package) obj;
+          if(obj instanceof Symbol) { //Hierarchical symbols
+              return ((Symbol) obj).asPackage();
+          }
           return (Package) // Not reached.       
         type_error(obj, Symbol.PACKAGE);
   }
@@ -1782,6 +1770,15 @@ public final class Lisp
               type_error(obj, Symbol.STRING);
   }
   
+  public final static SimpleString checkSimpleString(LispObject obj) 
+  
+    {
+            if (obj instanceof SimpleString)
+                    return (SimpleString) obj;                    
+            return (SimpleString)// Not reached.               
+                type_error(obj, Symbol.SIMPLE_STRING);
+    }
+  
   public final static Layout checkLayout(LispObject obj) 
 
   {
@@ -1859,12 +1856,15 @@ public final class Lisp
   public static final Package coerceToPackage(LispObject obj)
 
   {
-    if (obj instanceof Package)
+    if (obj instanceof Package) {
       return (Package) obj;
-    Package pkg = getCurrentPackage().findPackage(javaString(obj));
+    }
+      String name = javaString(obj);
+    Package namespace = getCurrentPackageOrRoot();
+    Package pkg = namespace.findPackage(name);
     if (pkg != null)
       return pkg;
-    error(new PackageError(obj.princToString() + " is not the name of a package."));
+    error(new PackageError(name + " is not the name of a package. Search namespace: " + namespace.princToString()));
     // Not reached.
     return null;
   }
@@ -2166,13 +2166,10 @@ public final class Lisp
   }
 
   // Used by the compiler.
-  public static final Symbol internInPackage(String name, String packageName)
+  public static final Symbol reconstructSymbol(String name)
 
   {
-    Package pkg = getCurrentPackage().findPackage(packageName);
-    if (pkg == null)
-      error(new LispError(packageName + " is not the name of a package."));
-    return pkg.intern(name);
+      return (Symbol) new StringInputStream(name).read(true, NIL, false, LispThread.currentThread(), Stream.faslReadtable);
   }
 
   public static final Symbol internKeyword(String s)
@@ -2260,9 +2257,30 @@ public final class Lisp
     Symbol._PACKAGE_.initializeSpecial(PACKAGE_CL_USER);
   }
 
-  public static final Package getCurrentPackage()
+    public static final Package getCurrentPackageOrRoot() {
+        Package currentPackage = getCurrentPackage(false);
+        if(currentPackage == null) {
+            return Symbol.TOP_LEVEL_PACKAGES.asPackage();
+        } else {
+            return currentPackage;
+        }
+    }
+
+    public static final Package getCurrentPackage() {
+        return getCurrentPackage(true);
+    }
+
+  public static final Package getCurrentPackage(boolean errorIfNotValid)
   {
-    return (Package) Symbol._PACKAGE_.symbolValueNoThrow();
+      LispObject lispObject = Symbol._PACKAGE_.symbolValueNoThrow();
+      try {
+          return (Package) lispObject;
+      } catch (ClassCastException e) {
+          if(errorIfNotValid) {
+              error(new LispError("The value of CL:*PACKAGE* is not of type PACKAGE"));
+          }
+          return null;
+      }
   }
 
 

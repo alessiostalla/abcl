@@ -2,7 +2,7 @@
  * JavaStackFrame.java
  *
  * Copyright (C) 2009 Mark Evenson
- * $Id$
+ * $Id: JavaStackFrame.java 14953 2017-01-17 07:18:06Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

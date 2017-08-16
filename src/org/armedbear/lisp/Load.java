@@ -2,7 +2,7 @@
  * Load.java
  *
  * Copyright (C) 2002-2007 Peter Graves
- * $Id$
+ * $Id: Load.java 14914 2016-11-24 10:31:17Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -33,12 +33,12 @@
 
 package org.armedbear.lisp;
 
-import static org.armedbear.lisp.Lisp.*;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.text.MessageFormat;
+
+import static org.armedbear.lisp.Lisp.*;
 
 /* This file holds ABCL's (FASL and non-FASL) loading behaviours.
  *

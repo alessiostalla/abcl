@@ -1,7 +1,7 @@
 ;;; defpackage.lisp
 ;;;
 ;;; Copyright (C) 2003-2007 Peter Graves
-;;; $Id$
+;;; $Id: defpackage.lisp 14914 2016-11-24 10:31:17Z mevenson $
 ;;;
 ;;; This program is free software; you can redistribute it and/or
 ;;; modify it under the terms of the GNU General Public License
@@ -63,6 +63,9 @@
    symbols)
 
 (defmacro defpackage (package &rest options)
+  `(symbol:|define-namespace| ,(string package) ,@options))
+
+(defmacro symbol:|define-namespace| (symbol-or-string &rest options)
   (let ((nicknames nil)
         (size nil)
         (shadows nil)
@@ -73,7 +76,10 @@
         (interns nil)
         (exports nil)
         (local-nicknames nil)
-        (doc nil))
+        (doc nil)
+        (symbol (if (symbolp symbol-or-string)
+                   `(quote ,symbol-or-string)
+                  `(symbol:|intern| ,(string symbol-or-string) ,(symbol:|intern| "top-level-packages" symbol:|root|)))))
     (dolist (option options)
       (unless (consp option)
         (error 'program-error "bad DEFPACKAGE option: ~S" option))
@@ -136,7 +142,7 @@
                (cerror "Continue anyway"
                        (format nil "Trying to define a local nickname for package ~A"
                                local-nickname)))
-             (when (member local-nickname (list* package nicknames)
+             (when (member local-nickname (list* (string symbol-or-string) nicknames)
                            :test #'string=)
                (cerror "Continue anyway"
                        "Trying to override the name or a nickname (~A) ~
@@ -153,12 +159,13 @@
                     `(:shadowing-import-from
                       ,@(apply #'append (mapcar #'rest shadowing-imports))))
     `(prog1
-       (%defpackage ,(string package) ',nicknames ',size
+       (%defpackage ,symbol ',nicknames ',size
 		    ',shadows (ensure-available-symbols ',shadowing-imports)
 		    ',(if use-p use nil)
 		    (ensure-available-symbols ',imports) ',interns ',exports
 		    ',local-nicknames ',doc)
-       ,(when (and (symbolp package) (not (keywordp package)))
-	  `(record-source-information-for-type ',package :package))
-       (record-source-information-for-type ,(intern (string package) :keyword) :package)
+       ,(when (and (symbolp symbol-or-string) (not (keywordp symbol-or-string)))
+	  `(record-source-information-for-type ',symbol-or-string :package))
+       (record-source-information-for-type ,(intern (string symbol-or-string) :keyword) :package)
        )))
+

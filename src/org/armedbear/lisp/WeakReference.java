@@ -2,7 +2,7 @@
  * WeakReference.java
  *
  * Copyright (C) 2011 Erik Huelsmann
- * $Id$
+ * $Id: WeakReference.java 13440 2011-08-05 21:25:10Z ehuelsmann $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

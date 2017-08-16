@@ -2,7 +2,7 @@
  * Profiler.java
  *
  * Copyright (C) 2003-2005 Peter Graves
- * $Id$
+ * $Id: Profiler.java 14497 2013-05-15 06:42:41Z rschlatte $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -61,7 +61,7 @@ public class Profiler
                 else
                     return error(new LispError(
                         "%START-PROFILER: argument must be either :TIME or :COUNT-ONLY"));
-                Package[] packages = Packages.getAllPackages();
+                Package[] packages = Packages.getAllTopLevelPackages();
                 for (int i = 0; i < packages.length; i++) {
                     Package pkg = packages[i];
                     Symbol[] symbols = pkg.symbols();

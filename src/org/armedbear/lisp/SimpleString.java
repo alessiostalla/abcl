@@ -2,7 +2,7 @@
  * SimpleString.java
  *
  * Copyright (C) 2004-2005 Peter Graves
- * $Id$
+ * $Id: SimpleString.java 14889 2016-10-07 06:34:32Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

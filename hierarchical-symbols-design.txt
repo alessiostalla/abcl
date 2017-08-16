@@ -1,0 +1,27 @@
+DESIGN
+
+Every symbol has a parent. NIL is a special parent that means "no parent". Thus symbols are arranged in hierarchies which are trees with NIL as the root. Symbols therefore act as containers, or namespaces, for other symbols. Packages can thus be conflated with symbols: each symbol can double as a package and, indeed, package objects are just a "view" of the underlying symbol and exist only for backwards compatibility with Common Lisp.
+There is one privileged hierarchy, the one whose root is the parent of the COMMON-LISP package (i.e., symbol) in which all standard Common Lisp symbols reside. That root is hereby referred to as #<ROOT>.
+
+DESIGN DILEMMA #1
+
+The root symbol. Choices:
+
+(A) The root symbol is the :keyword package
++ read consistency for keywords: in :foo:bar and :foo, :foo refers to the same symbol, #<ROOT>:foo, which is also a keyword.
++ one less "special" package/symbol.
+- to preserve backwards compatibility when searching for a package (say, CL), either (L) it must be searched locally (all packages see the CL symbol) or (R) it must be searched first in the root.
+   (L) implies that, for CL:X to work everywhere, every package must import the CL symbol and if it also a keyword then they cannot rebind it. This is a strong limitation and a problem of backwards compatibility, especially for packages with common names like SEQUENCE, SYSTEM, EXTENSIONS etc. which collide with symbols in the CL package or with symbols in user libraries.
+   (R) implies an inconsistency: in CL:X and CL, the two CL's are possibly different symbols (the first is really :CL, the second might be CL-USER:CL).
+- :keyword is a symbol whose namespace is itself, this can be confusing.
+
+(B) The root symbol is not the :keyword package
+- Read inconsistency for keywords: :foo is a keyword (for backwards compatibility), but in general :foo:bar is not, it is symbol BAR in symbol FOO in symbol #<ROOT>. This can be turned off with a flag, say, *legacy-packages*: when it is false, CL compatibility is broken and :foo is consistently #<ROOT>:foo, while for the keyword you need to spell :keyword:foo or import it in your package.
++ For backwards compatibility with CL, there is still the inconsistency present in hypothesis (A) - of, e.g., SEQUENCE in 'SEQUENCE:COUNT and 'SEQUENCE alone being two different symbols if SEQUENCE is a global package, unless you import SEQUENCE in your package. This is for backwards compatibility, because if a user evaluates (defpackage foo), in Common Lisp code they expect foo::x to refer to the global package FOO from everywhere. However, there isn't the additional limitation of keywords being constants, so SEQUENCE-the-package and SEQUENCE-the-CL-symbol can be arranged to be the same symbol without drawbacks, by importing :sequence in CL (or by importing cl:sequence into #<ROOT>). For system packages, the implementation can probably arrange things like that automatically, so for users it's transparent. For user packages, this cannot be done by the implementation, users have to write the boilerplate manually if they want to avoid the inconsistency.
+   Ideally, if no backwards compatibility were required, top-level packages would always be prefixed by a colon - :cl:count or :sequence:count - unless locally imported. However, in an existing CL system, this is not possible. As a migration path towards a highly hypothetical CL2, the reader might consult a flag - say, the same *legacy-packages* as above - to control whether to look at the root namespace first (legacy, inconsistent) or at the current namespace first (new, consistent but requiring colons for global packages that haven't been imported in the current namespace).
+
+IDEA: use (B) but automatically define each symbol interned in the root symbol to have a constant binding to the keyword with the same name uppercased. That way, in hierarchical symbols mode, :foo can be used as a substitute for the keyword :FOO.
+
+NOTES
+
+delete-package: this operation should be deprecated as it is now too broad. With symbols being imported, aliased, used as namespaces in several places, to delete a symbol atomically requires a lock on the whole symbol system; apart from concurrency issues, there are new possibilities for failure that are absent in CL. Removing an alias can uncover a conflict between used packages, for example. delete-package is necessary because packages are not first-class; symbols are, so once a symbol is no longer referenced by any live object it will be GC'ed.

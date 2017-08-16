@@ -2,7 +2,7 @@
  * Stream.java
  *
  * Copyright (C) 2003-2007 Peter Graves
- * $Id$
+ * $Id: Stream.java 14466 2013-04-24 12:50:40Z rschlatte $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -33,29 +33,14 @@
 
 package org.armedbear.lisp;
 
-import static org.armedbear.lisp.Lisp.*;
+import org.armedbear.lisp.util.DecodingReader;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.PushbackReader;
-import java.io.Reader;
-import java.io.StringWriter;
-import java.io.Writer;
+import java.io.*;
 import java.math.BigInteger;
 import java.nio.charset.Charset;
-import java.util.BitSet;
+import java.util.*;
 
-import java.util.List;
-import java.util.LinkedList;
-import java.util.SortedMap;
-import java.util.Set;
-
-import org.armedbear.lisp.util.DecodingReader;
+import static org.armedbear.lisp.Lisp.*;
 
 /** The stream class
  *
@@ -1095,7 +1080,7 @@ public class Stream extends StructureObject {
         if (Symbol.READ_SUPPRESS.symbolValue(thread) != NIL)
             return NIL;
         final LispObject readtableCase = rt.getReadtableCase();
-        final String token =  sb.toString();
+        String token =  sb.toString();
         final boolean invert = readtableCase == Keyword.INVERT;
         final int length = token.length();
         if (length > 0) {
@@ -1135,75 +1120,93 @@ public class Stream extends StructureObject {
                         return number;
                 }
             }
-            
-            String symbolName;
-            String packageName = null;
-            BitSet symbolFlags;
-            BitSet packageFlags = null;
-            Package pkg = null;
-            boolean internSymbol = true;
+
+            Symbol namespace;
             if (firstChar == ':' && (flags == null || !flags.get(0))) {
-                    symbolName = token.substring(1);
-                    pkg = PACKAGE_KEYWORD;
-                    if (flags != null)
-                        symbolFlags = flags.get(1, flags.size());
-                    else
-                        symbolFlags = null;
+                token = token.substring(1);
+                if(flags != null) {
+                    flags = flags.get(1, flags.size());
+                }
+                namespace = Symbol.ROOT_SYMBOL;
             } else {
-                int index = findUnescapedDoubleColon(token, flags);
-                if (index > 0) {
-                    packageName = token.substring(0, index);
-                    packageFlags = (flags != null) ? flags.get(0, index) :  null;
-                    symbolName = token.substring(index + 2);
-                    symbolFlags = (flags != null) ? flags.get(index+2, flags.size()) : null;
-                } else {
-                    index = findUnescapedSingleColon(token, flags);
-                    if (index > 0) {
-                        packageName = token.substring(0, index);
-                        packageFlags = (flags != null) ? flags.get(0, index) : null;
-                        symbolName = token.substring(index + 1);
-                        symbolFlags = (flags != null) ? flags.get(index+2, flags.size()) : null;
-                        internSymbol = false;
-                    } else {
-                        pkg = (Package)Symbol._PACKAGE_.symbolValue(thread);
-                        symbolName = token;
-                        symbolFlags = flags;
+                Package pkg = getCurrentPackageOrRoot();
+                namespace = pkg.getSymbol();
+            }
+            return readSymbol(flags, token, invert, namespace, true, true);
+        } else {                // token.length == 0
+            Package pkg = getCurrentPackageOrRoot();
+            return pkg.intern("");
+        }
+    }
+
+    private LispObject readSymbol(
+            BitSet flags, String token, boolean invert, Symbol namespace,
+            boolean internSymbol, boolean firstToken) {
+        String nextToken = null;
+        String symbolName;
+        BitSet packageFlags = null;
+        boolean internNextSymbol = true;
+        int index1 = findUnescapedDoubleColon(token, flags);
+        int index2 = findUnescapedSingleColon(token, flags);
+        if (index1 > 0 && index1 <= index2) { //Double colon
+            symbolName = token.substring(0, index1);
+            if(flags != null) {
+                packageFlags = flags.get(0, index1);
+                flags = flags.get(index1 + 2, flags.size());
+            }
+            nextToken = token.substring(index1 + 2);
+        } else {
+            if (index2 > 0) { //Single colon
+                symbolName = token.substring(0, index2);
+                if(flags != null) {
+                    packageFlags = flags.get(0, index2);
+                    flags = flags.get(index2 + 1, flags.size());
+                }
+                nextToken = token.substring(index2 + 1);
+                internNextSymbol = false;
+            } else { //No colon
+                symbolName = token;
+            }
+        }
+        if (invert) {
+            symbolName = invert(symbolName, packageFlags);
+        }
+        Symbol nextNamespace;
+        if(firstToken) {
+            if(nextToken == null) {
+                return namespace.intern(symbolName);
+            } else {
+                nextNamespace = namespace.findAccessibleSymbol(symbolName);
+                if(nextNamespace == null || !nextNamespace.isPackage()) {
+                    nextNamespace = Symbol.TOP_LEVEL_PACKAGES.findAccessibleSymbol(symbolName);
+                    if(nextNamespace == null) {
+                        return error(new ReaderError(symbolName + " is not the name of a package."));
                     }
                 }
             }
-            if (pkg == null) {
-                if (invert)
-                    packageName = invert(packageName, packageFlags);
-
-                pkg = getCurrentPackage().findPackage(packageName);
-                if (pkg == null)
-                    return error(new ReaderError("The package \"" + packageName + "\" can't be found.", this));
+        } else if (internSymbol) {
+            nextNamespace = namespace.intern(symbolName);
+        } else {
+            nextNamespace = namespace.findAccessibleSymbol(symbolName);
+        }
+        if(nextNamespace == null) {
+            // Error!
+            if (namespace.findInternalSymbol(symbolName) != null)
+                return error(new ReaderError("The symbol \"" + symbolName +
+                        "\" is not external in package " +
+                        namespace.princToString() + '.',
+                        this));
+            else {
+                return error(new ReaderError("The symbol \"" + symbolName +
+                        "\" was not found in package " +
+                        namespace.princToString() + '.',
+                        this));
             }
-            if (invert)
-                symbolName = invert(symbolName, symbolFlags);
-            
-            if (internSymbol) {
-                return pkg.intern(symbolName);
-            } else {
-                Symbol symbol = pkg.findExternalSymbol(symbolName);
-                if (symbol != null)
-                    return symbol;
-
-                // Error!
-                if (pkg.findInternalSymbol(symbolName) != null)
-                    return error(new ReaderError("The symbol \"" + symbolName +
-                                                 "\" is not external in package " +
-                                                 packageName + '.',
-                                                 this));
-                else
-                    return error(new ReaderError("The symbol \"" + symbolName +
-                                                 "\" was not found in package " +
-                                                 packageName + '.',
-                                                 this));
-            }
-        } else {                // token.length == 0
-            Package pkg = (Package)Symbol._PACKAGE_.symbolValue(thread);
-            return pkg.intern("");
+        }
+        if(nextToken == null) {
+            return nextNamespace;
+        } else {
+            return readSymbol(flags, nextToken, invert, nextNamespace, internNextSymbol, false);
         }
     }
 

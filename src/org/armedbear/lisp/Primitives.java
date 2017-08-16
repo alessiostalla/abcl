@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2002-2007 Peter Graves
  * Copyright (C) 2011 Erik Huelsmann
- * $Id$
+ * $Id: Primitives.java 14588 2013-11-24 21:00:55Z ehuelsmann $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -1637,9 +1637,7 @@ public final class Primitives {
         }
 
         @Override
-        public LispObject execute(LispObject first, LispObject second)
-
-        {
+        public LispObject execute(LispObject first, LispObject second) {
             return error(new UndefinedFunction(first));
         }
     };
@@ -3129,7 +3127,7 @@ public final class Primitives {
             else
                 s = new SimpleString(arg.getStringValue());
             final LispThread thread = LispThread.currentThread();
-            Package pkg = (Package) Symbol._PACKAGE_.symbolValue(thread);
+            Package pkg = getCurrentPackage();
             return pkg.intern(s, thread);
         }
         @Override
@@ -3145,6 +3143,210 @@ public final class Primitives {
             return pkg.intern(s, LispThread.currentThread());
         }
     };
+
+    //Hierarchical symbols
+    public static Symbol ensureSymbol(LispObject namespace) {
+        if (namespace instanceof Package) {
+            return ((Package) namespace).getSymbol();
+        } else {
+            return checkSymbol(namespace);
+        }
+    }
+    
+    // ### symbol:alias symbol string &optional export => symbol
+    private static final Primitive SYMBOL_ALIAS = new pf_symbol_alias();
+    private static final class pf_symbol_alias extends Primitive {
+        pf_symbol_alias() {
+            super(Symbol.SYMBOL_ALIAS, "symbol string &optional symbol");
+        }
+
+        @Override
+        public LispObject execute(LispObject first, LispObject second) {
+            return execute(first, second, NIL);
+        }
+        
+        @Override
+        public LispObject execute(LispObject symbol, LispObject string, LispObject export) {
+            Symbol sym = ensureSymbol(symbol);
+            return sym.getParent().alias(sym, checkString(string).toString(), export != NIL);
+        }
+    }
+
+    // ### symbol:as-package symbol => package
+    private static final Primitive SYMBOL_AS_PACKAGE = new pf_symbol_as_package();
+    private static final class pf_symbol_as_package extends Primitive {
+        pf_symbol_as_package() {
+            super(Symbol.SYMBOL_AS_PACKAGE, "symbol");
+        }
+
+        @Override
+        public LispObject execute(LispObject first) {
+            return checkSymbol(first).asPackage();
+        }
+    }
+    
+    // ### symbol:find string &optional symbol => symbol, status
+    private static final Primitive SYMBOL_FIND = new pf_symbol_find();
+    private static final class pf_symbol_find extends Primitive {
+        pf_symbol_find() {
+            super(Symbol.SYMBOL_FIND, "string &optional symbol");
+        }
+
+        @Override
+        public LispObject execute(LispObject arg) {
+            return getCurrentPackage()
+                   .findSymbol(checkString(arg).getStringValue());
+        }
+
+        @Override
+        public LispObject execute(LispObject first, LispObject second)
+
+        {
+            return checkSymbol(second)
+                   .findSymbol(checkString(first).getStringValue());
+        }
+    };
+
+    // ### symbol::%import symbol namespace &optional name => symbol
+    private static final Primitive SYMBOL_IMPORT = new pf_symbol_import();
+    private static final class pf_symbol_import extends Primitive {
+        pf_symbol_import() {
+            super("%import", Symbol.SYMBOL.asPackage(), false);
+        }
+
+        @Override
+        public LispObject execute(LispObject symbol, LispObject namespace) {
+            Symbol sym = checkSymbol(symbol);
+            return execute(sym, namespace, sym.name);
+        }
+        
+        @Override
+        public LispObject execute(LispObject symbol, LispObject namespace, LispObject name) {
+            Symbol sym = checkSymbol(symbol);
+            return execute(sym, namespace, checkSimpleString(name));
+        }
+        
+        public LispObject execute(Symbol symbol, LispObject namespace, SimpleString name) {
+            ensureSymbol(namespace).importSymbol(symbol, name);
+            return symbol;
+        }
+        
+    }
+
+    // ### symbol:intern string &optional symbol => symbol, status
+    // STATUS is one of :INHERITED, :EXTERNAL, :INTERNAL or NIL.
+    // "It is implementation-dependent whether the string that becomes the new
+    // symbol's name is the given string or a copy of it."
+    private static final Primitive SYMBOL_INTERN = new pf_symbol_intern();
+    private static final class pf_symbol_intern extends Primitive {
+        pf_symbol_intern() {
+            super(Symbol.SYMBOL_INTERN, "string &optional symbol");
+        }
+
+        @Override
+        public LispObject execute(LispObject arg) {
+            return INTERN.execute(arg);
+        }
+        @Override
+        public LispObject execute(LispObject string, LispObject symbol) {
+            final SimpleString s;
+            if (string instanceof SimpleString)
+                s = (SimpleString) string;
+            else
+                s = new SimpleString(string.getStringValue());
+            return checkSymbol(symbol).intern(s, LispThread.currentThread());
+        }
+    };
+
+    // ### symbol:parent symbol => symbol
+    private static final Primitive SYMBOL_PARENT = new pf_symbol_parent();
+    private static final class pf_symbol_parent extends Primitive {
+        pf_symbol_parent() {
+            super(Symbol.SYMBOL_PARENT, "symbol");
+        }
+
+        @Override
+        public LispObject execute(LispObject arg) {
+            return checkSymbol(arg).getParent();
+        }
+    };
+
+    // ### symbol:property symbol property &optional default => value, found
+    private static final Primitive SYMBOL_PROPERTY = new pf_symbol_property();
+    private static final class pf_symbol_property extends Primitive {
+        pf_symbol_property() {
+            super(Symbol.SYMBOL_PROPERTY, "symbol property &optional default");
+        }
+
+        @Override
+        public LispObject execute(LispObject first, LispObject second) {
+            return execute(first, second, NIL);
+        }
+
+        @Override
+        public LispObject execute(LispObject first, LispObject second, LispObject third) {
+            return checkSymbol(first).getProperty(checkSymbol(second), third);
+        }
+    };
+
+    // ### symbol::%set-property symbol property value => value
+    private static final Primitive _SYMBOL_SET_PROPERTY = new pf__symbol_set_property();
+    private static final class pf__symbol_set_property extends Primitive {
+        pf__symbol_set_property() {
+            super("%set-property", Symbol.SYMBOL.asPackage(), false);
+        }
+
+        @Override
+        public LispObject execute(LispObject first, LispObject second,
+                                  LispObject third)
+
+        {
+            return checkSymbol(first).setProperty(checkSymbol(second), third);
+        }
+    };
+    
+    // ### symbol:remove-alias symbol string => symbol
+    private static final Primitive SYMBOL_REMOVE_ALIAS = new pf_symbol_remove_alias();
+    private static final class pf_symbol_remove_alias extends Primitive {
+        pf_symbol_remove_alias() {
+            super(Symbol.SYMBOL_REMOVE_ALIAS, "symbol string");
+        }
+
+        @Override
+        public LispObject execute(LispObject symbol, LispObject string) {
+            Symbol result = ensureSymbol(symbol).removeAlias(checkString(string).toString());
+            return result != null ? result : NIL;
+        }
+    };
+
+    // ### symbol:remove-property symbol property => value
+    private static final Primitive SYMBOL_REMOVE_PROPERTY = new pf_symbol_remove_property();
+    private static final class pf_symbol_remove_property extends Primitive {
+        pf_symbol_remove_property() {
+            super(Symbol.SYMBOL_REMOVE_PROPERTY, "symbol property");
+        }
+
+        @Override
+        public LispObject execute(LispObject first, LispObject second) {
+            return checkSymbol(first).removeProperty(checkSymbol(second));
+        }
+    };
+
+    // ### package:symbol package-designator => symbol
+    private static final Primitive PACKAGE_SYMBOL = new pf_package_symbol();
+    private static final class pf_package_symbol extends Primitive {
+        pf_package_symbol() {
+            super(Symbol.PACKAGE_SYMBOL, "package");
+        }
+
+        @Override
+        public LispObject execute(LispObject arg) {
+            Package pkg = coerceToPackage(arg);
+            return pkg.getSymbol();
+        }
+    };
+    
+    //End hierarchical symbols
 
     // ### unintern
     // unintern symbol &optional package => generalized-boolean
@@ -3179,19 +3381,24 @@ public final class Primitives {
         public LispObject execute(LispObject arg) {
             if (arg instanceof Package)
                 return arg;
+            Package currentPackage = getCurrentPackage(false);
+            if(currentPackage == null) {
+                Debug.warn("The value of CL:*PACKAGE* is not a package");
+                currentPackage = Symbol.ROOT_SYMBOL.asPackage();
+            }
             if (arg instanceof AbstractString) {
                 Package pkg =
-                  getCurrentPackage().findPackage(arg.getStringValue());
+                  currentPackage.findPackage(arg.getStringValue());
                 return pkg != null ? pkg : NIL;
             }
             if (arg instanceof Symbol) {
-                Package pkg = getCurrentPackage().findPackage(checkSymbol(arg).getName());
+                Package pkg = currentPackage.findPackage(checkSymbol(arg).getName());
                 return pkg != null ? pkg : NIL;
             }
             if (arg instanceof LispCharacter) {
                 String packageName =
                     String.valueOf(new char[] {((LispCharacter)arg).getValue()});
-                Package pkg = getCurrentPackage().findPackage(packageName);
+                Package pkg = currentPackage.findPackage(packageName);
                 return pkg != null ? pkg : NIL;
             }
             return NIL;
@@ -3255,7 +3462,7 @@ public final class Primitives {
                         Package p = currentpkg.findPackage(s);
                         if (p == null) {
                             error(new LispError(obj.princToString() +
-                                                " is not the name of a package."));
+                                                " is not the name of a package. 2"));
                             return NIL;
                         }
                     }
@@ -3280,7 +3487,7 @@ public final class Primitives {
                     Package p = currentpkg.findPackage(s);
                     if (p == null) {
                         error(new LispError(obj.princToString() +
-                                            " is not the name of a package."));
+                                            " is not the name of a package. 3"));
                         return NIL;
                     }
                     pkg.usePackage(p);
@@ -3305,6 +3512,20 @@ public final class Primitives {
             if (pkg == null)
                 return error(new PackageError("The name " + packageName +
                                               " does not designate any package."));
+            return _IN_NAMESPACE.execute(pkg);
+        }
+    };
+
+    // ### in-namespace
+    private static final Primitive _IN_NAMESPACE = new pf__in_namespace();
+    private static final class pf__in_namespace extends Primitive {
+        pf__in_namespace() {
+            super(Symbol.CL_WITH_HSYMBOLS.internAndExport("in-namespace"));
+        }
+
+        @Override
+        public LispObject execute(LispObject arg) {
+            final Package pkg = checkPackage(arg);
             SpecialBinding binding =
                 LispThread.currentThread().getSpecialBinding(Symbol._PACKAGE_);
             if (binding != null)

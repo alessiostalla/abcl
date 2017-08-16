@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2004-2006 Peter Graves
  * Copyright (C) 2008 Hideo at Yokohama
- * $Id$
+ * $Id: FileStream.java 13444 2011-08-06 13:51:26Z ehuelsmann $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License

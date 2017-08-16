@@ -2,7 +2,7 @@
  * LispCharacter.java
  *
  * Copyright (C) 2002-2007 Peter Graves
- * $Id$
+ * $Id: LispCharacter.java 14787 2015-06-12 09:18:37Z mevenson $
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
