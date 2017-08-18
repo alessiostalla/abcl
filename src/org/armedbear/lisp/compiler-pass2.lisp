@@ -5243,7 +5243,7 @@ for use with derive-type-times.")
         one-integer-type
       (derive-compiler-types args op))))
 
-(define-int-bounds-derivation max (low1 low2 high1 high2)
+(define-int-bounds-derivation max (low1 high1 low2 high2)
   (values (or (when (and low1 low2) (max low1 low2)) low1 low2)
           ; if either maximum is unbound, their maximum is unbound
           (when (and high1 high2) (max high1 high2))))
@@ -5536,7 +5536,9 @@ We need more thought here.
          (compile-operand list-form nil)
          (maybe-emit-clear-values index-form list-form))
       (emit 'swap)
-      (emit-invokevirtual +lisp-object+ "NTH" '(:int) +lisp-object+))))
+      (emit-invokevirtual +lisp-object+ "NTH" '(:int) +lisp-object+))
+    (fix-boxing representation nil) ; FIXME use derived result type
+    (emit-move-from-stack target representation)))
 
 (defun p2-times (form target representation)
   (case (length form)
