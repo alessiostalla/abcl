@@ -1871,7 +1871,7 @@ public final class Lisp
     Package pkg = namespace.findPackage(name);
     if (pkg != null)
       return pkg;
-    error(new PackageError(name + " is not the name of a package. Search namespace: " + namespace.princToString()));
+    error(new PackageError(obj.princToString() + " is not the name of a package. Search namespace: " + namespace.princToString()), obj);
     // Not reached.
     return null;
   }
@@ -2423,6 +2423,10 @@ public final class Lisp
         featureList = new Cons(Keyword.JAVA_1_6, featureList);
     } else if (javaVersion.startsWith("1.7")) {
         featureList = new Cons(Keyword.JAVA_1_7, featureList);
+    } else if (javaVersion.startsWith("1.8")) {
+        featureList = new Cons(Keyword.JAVA_1_8, featureList);
+    } else if (javaVersion.startsWith("1.9")) {
+        featureList = new Cons(Keyword.JAVA_1_9, featureList);
     }
     // Processor architecture
     if(osArch != null) {

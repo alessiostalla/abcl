@@ -410,4 +410,13 @@ public class Package extends LispObject implements java.io.Serializable {
     return obj instanceof Package && ((Package) obj).symbol == symbol;
   }
 
+    public Object readResolve() throws java.io.ObjectStreamException {
+        String name = getName();
+        Package pkg = findPackage(name);
+        if(pkg != null) {
+            return pkg;
+        } else {
+            return error(new PackageError(name + " is not the name of a package.", new SimpleString(name)));
+        }
+    }
 }
