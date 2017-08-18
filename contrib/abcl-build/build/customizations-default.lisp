@@ -17,22 +17,22 @@
 ;;; Directories should be specified with a trailing slash (or, on Windows, a
 ;;; trailing backslash).
 
-(in-package "BUILD-ABCL")
+(in-package :abcl/build)
 
 ;; Standard compiler options.
-(setq *javac-options* "-g")
-(setq *jikes-options* "+D -g")
+(defparameter *javac-options*
+  "-g")
+(defparameter *jikes-options*
+  "+D -g")
 
-;; *PLATFORM* will be either :WINDOWS, :DARWIN, :LINUX, or :UNKNOWN.
-(case *platform*
-  (:windows
-   (setq *jdk*           "C:\\Program Files\\Java\\jdk1.5.0_16\\")
-   #+nil  (setq *java-compiler* "jikes")
-   )
-  (:darwin
-   (setq *jdk*           "/usr/")
-   #+nil (setq *java-compiler* "jikes")
-   #+nil (setq *jar*    "jar"))
-  ((:linux :unknown)
-   (setq *jdk*           "/home/peter/sun/jdk1.5.0_16/")
-   (setq *jar*           "fastjar")))
+(defparameter *jdk*
+  (cond
+    ((uiop:os-macosx-p) 
+     "/usr/")
+    (t
+     (introspect-path-for "javac"))))
+
+
+
+
+
