@@ -4408,4 +4408,7 @@ public class Symbol extends LispObject implements java.io.Serializable
   }
   public static final Symbol PACKAGE_SYMBOL = PACKAGE.internAndExport("symbol");
 
+  // JVM
+  public static final Symbol _RESIGNAL_COMPILER_WARINGS_ =
+    PACKAGE_JVM.addExternalSymbol("*RESIGNAL-COMPILER-WARNINGS*");
 }
