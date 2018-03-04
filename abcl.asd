@@ -157,3 +157,33 @@ be in a directory named '../ansi-test/'."
             :components ((:file "index" :depends-on (grovel))
                          (:file "grovel")))))
 
+(defsystem abcl/tools
+  :version "0.2.0"
+  :components (#+(or) ;; TODO Untangle source unit compile time execution
+               (:module grapher
+                        :pathname "tools/"
+                        :components ((:file "code-grapher")))
+               (:module digest
+                        :pathname "tools/"
+                        :components ((:file "digest")))))
+
+#+(or) ;; TODO Untangle source unit compile time execution
+(defsystem abcl/tools/bisect
+  :version "0.1.0"
+  :depends-on (abcl/test/ansi/compiled)
+  :components ((:module bisect
+                        :pathname "tools/"
+                        :components ((:file "check")))))
+
+(defsystem abcl/tools/resource
+  :version "0.1.0"
+  :depends-on (dexador alexandria)
+  :components ((:module http :pathname "tools/"
+                        :components ((:file "resource")))))
+
+(defsystem abcl/model/changes
+  :version "0.1.0"
+  :depends-on (jeannie) ;;; <https://bitbucket.org/easye/jeannie>
+  :components ((:module n3 :pathname "etc/"
+                        :components ((:static-file "changes.n3")
+                                     (:file "changes")))))
