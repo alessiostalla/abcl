@@ -381,7 +381,7 @@ public class Stream extends StructureObject {
     SortedMap<String, Charset> available = Charset.availableCharsets();
     Set<String> encodings = available.keySet();
     for (String charset : encodings) {
-      result.add(new Symbol(charset, PACKAGE_KEYWORD));
+      result.add (PACKAGE_KEYWORD.intern (charset));
     }
     return result;
   }
@@ -1191,16 +1191,16 @@ public class Stream extends StructureObject {
         }
         if(nextNamespace == null) {
             // Error!
-            if (namespace.findInternalSymbol(symbolName) != null)
-                return error(new ReaderError("The symbol \"" + symbolName +
-                        "\" is not external in package " +
-                        namespace.princToString() + '.',
-                        this));
-            else {
-                return error(new ReaderError("The symbol \"" + symbolName +
-                        "\" was not found in package " +
-                        namespace.princToString() + '.',
-                        this));
+          if (namespace.findInternalSymbol(symbolName) != null) {
+            return error(new ReaderError("The symbol \"~A\" is not external in package ~A.",
+                                         this,
+                                         new SimpleString(symbolName),
+                                         new SimpleString(namespace.princToString())));
+          } else {
+            return error(new ReaderError("The symbol \"~A\" was not found in package ~A.",
+                                         this,
+                                         new SimpleString(symbolName),
+                                         new SimpleString(namespace.princToString())));
             }
         }
         if(nextToken == null) {
