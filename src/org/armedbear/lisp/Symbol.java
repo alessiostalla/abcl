@@ -110,6 +110,7 @@ public class Symbol extends LispObject implements java.io.Serializable
         public LispObject getPackage() {
             return NIL;
         }
+
     };
     public static final Symbol TOP_LEVEL_PACKAGES = ROOT_SYMBOL.intern("top-level-packages");
     static {

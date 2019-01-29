@@ -35,9 +35,13 @@ package org.armedbear.lisp;
 
 import static org.armedbear.lisp.Lisp.*;
 
-public final class Nil extends Symbol
-{
+public final class Nil extends Symbol {
     final public static Symbol NIL = new Nil(PACKAGE_CL);
+
+  static {
+    //When the root symbol is instantiated, Nil.NIL is still null
+    ROOT_SYMBOL.setParent(NIL);
+  }
 
     public Nil(Package pkg)
     {
