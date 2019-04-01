@@ -1866,7 +1866,10 @@ public final class Lisp
     if (obj instanceof Package) {
       return (Package) obj;
     }
-      String name = javaString(obj);
+    if(obj == Symbol.ROOT_SYMBOL) {
+      return Symbol.ROOT_SYMBOL.asPackage();
+    }
+    String name = javaString(obj);
     Package namespace = getCurrentPackageOrRoot();
     Package pkg = namespace.findPackage(name);
     if (pkg != null)

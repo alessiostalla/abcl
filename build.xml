@@ -1003,7 +1003,7 @@ ${basedir}/../cl-bench
     <target name="abcl.ext" depends="abcl.ext.p" unless="abcl.ext.p">
       <mkdir dir="${abcl.ext.dir}"/>
       <get 
-          src="http://cloud.github.com/downloads/KentBeck/junit/junit-4.8.1.jar"
+          src="https://search.maven.org/remotecontent?filepath=junit/junit/4.8.1/junit-4.8.1.jar"
           usetimestamp="true"
           dest="${junit.path}"/>
       <get 
@@ -1092,12 +1092,12 @@ ${basedir}/../cl-bench
         <jvmarg value="-XX:MaxPermSize=768m"/> 
 
 	<!-- Enable debugger on port 5005 -->
-	<jvmarg value="-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=5005" />
+	<jvmarg value="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005" />
 
         <arg value="--noinit"/> 
         <arg value="--eval"/><arg value="(require (quote asdf))"/>
         <arg value="--eval"/>
-          <arg value="(asdf:initialize-source-registry `(:source-registry (:directory ,*default-pathname-defaults*) :inherit-configuration)))"/>
+          <arg value="(asdf:initialize-source-registry `(:source-registry (:directory ,*default-pathname-defaults*) :inherit-configuration))"/>
         <arg value="--eval"/><arg value="(asdf:test-system :abcl/test/ansi/compiled)"/>
         <arg value="--eval"/><arg value="(ext:exit)"/>
       </java>

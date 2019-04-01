@@ -82,7 +82,7 @@
            (error 'simple-type-error
                   :datum arguments
                   :expected-type 'null
-                  :format-control "You may not supply additional arguments when giving ~S to ~S."
+                  :format-control "You may not supply additional arguments when giving ~A to ~S."
                   :format-arguments (list datum fun-name)))
          datum)
         ((symbolp datum)

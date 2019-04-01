@@ -80,6 +80,7 @@ public class Symbol extends LispObject implements java.io.Serializable
         };
         {
             initializeConstant(this);
+            //alias(this, "", false); //The root is also a top-level package
         }
 
       @Override
@@ -112,7 +113,7 @@ public class Symbol extends LispObject implements java.io.Serializable
         }
 
     };
-    public static final Symbol TOP_LEVEL_PACKAGES = ROOT_SYMBOL.intern("top-level-packages");
+  public static final Symbol TOP_LEVEL_PACKAGES = ROOT_SYMBOL.intern("TOP-LEVEL-PACKAGES");
     static {
         TOP_LEVEL_PACKAGES.asPackage();
         TOP_LEVEL_PACKAGES.externalSymbols.put("KEYWORD", ROOT_SYMBOL);
@@ -1441,7 +1442,7 @@ public class Symbol extends LispObject implements java.io.Serializable
               sb.append(sym.getQualifiedName());
               sb.append(" and ");
               sb.append(s.getQualifiedName());
-              error(new PackageError(sb.toString()), asPackage());
+              error(new PackageError(sb.toString(), asPackage()));
               return false;
             }
           }
@@ -1531,7 +1532,7 @@ public class Symbol extends LispObject implements java.io.Serializable
             sb.append(" as ");
             sb.append(symbolName);
             sb.append('.');
-            error(new PackageError(sb.toString()), asPackage());
+            error(new PackageError(sb.toString(), asPackage()));
             return;
         }
         if(symbolName == null) {
@@ -1546,7 +1547,7 @@ public class Symbol extends LispObject implements java.io.Serializable
                 sb.append(" is not accessible in package ");
                 sb.append(name);
                 sb.append('.');
-                error(new PackageError(sb.toString()), asPackage());
+                error(new PackageError(sb.toString(), asPackage()));
                 return;
             }
             internalSymbols.put(symbolName, symbol);
