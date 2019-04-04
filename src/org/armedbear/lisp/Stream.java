@@ -1174,24 +1174,24 @@ public class Stream extends StructureObject {
         Symbol nextNamespace;
         if(firstToken) {
             if(nextToken == null) {
-                return namespace.intern(symbolName);
+                return namespace.checkPackage().intern(symbolName);
             } else {
-                nextNamespace = namespace.findAccessibleSymbol(symbolName);
+              nextNamespace = namespace.ensurePackage().findAccessibleSymbol(symbolName);
+              if(nextNamespace == null || !nextNamespace.isPackage()) {
+                nextNamespace = Symbol.TOP_LEVEL_PACKAGES.ensurePackage().findAccessibleSymbol(symbolName);
                 if(nextNamespace == null || !nextNamespace.isPackage()) {
-                    nextNamespace = Symbol.TOP_LEVEL_PACKAGES.findAccessibleSymbol(symbolName);
-                    if(nextNamespace == null) {
-                        return error(new ReaderError(symbolName + " is not the name of a package."));
-                    }
+                  return error(new ReaderError(symbolName + " is not the name of a package."));
                 }
+              }
             }
         } else if (internSymbol) {
-            nextNamespace = namespace.intern(symbolName);
+          nextNamespace = namespace.checkPackage().intern(symbolName);
         } else {
-            nextNamespace = namespace.findAccessibleSymbol(symbolName);
+          nextNamespace = namespace.checkPackage().findAccessibleSymbol(symbolName);
         }
         if(nextNamespace == null) {
             // Error!
-          if (namespace.findInternalSymbol(symbolName) != null) {
+          if (namespace.ensurePackage().findInternalSymbol(symbolName) != null) {
             return error(new ReaderError("The symbol \"~A\" is not external in package ~A.",
                                          this,
                                          new SimpleString(symbolName),

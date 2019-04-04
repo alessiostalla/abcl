@@ -63,9 +63,9 @@
    symbols)
 
 (defmacro defpackage (package &rest options)
-  `(symbol:|define-namespace| ,(string package) ,@options))
+  `(symbol:define-namespace ,(string package) ,@options))
 
-(defmacro symbol:|define-namespace| (symbol-or-string &rest options)
+(defmacro symbol:define-namespace (symbol-or-string &rest options)
   (let ((nicknames nil)
         (size nil)
         (shadows nil)

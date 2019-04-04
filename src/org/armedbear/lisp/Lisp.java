@@ -69,9 +69,12 @@ public final class Lisp
   @DocString(name="nil")
   public static final Symbol NIL = Nil.NIL;
 
-  // We need NIL before we can call useNamespace().
+  // We need NIL before we can give nicknames and call usePackage().
   static
   {
+    for(Package p: Packages.getAllTopLevelPackages()) {
+      p.initNicknames();
+    }
     PACKAGE_CL.addNickname("CL");
     PACKAGE_CL_USER.addNickname("CL-USER");
     PACKAGE_CL_USER.usePackage(PACKAGE_CL);
@@ -112,15 +115,6 @@ public final class Lisp
     PACKAGE_PRECOMPILER.usePackage(PACKAGE_EXT);
     PACKAGE_PRECOMPILER.usePackage(PACKAGE_SYS);
     PACKAGE_SEQUENCE.usePackage(PACKAGE_CL);
-
-    //Hierarchical symbols
-      Symbol.CL_WITH_HSYMBOLS.asPackage();
-      Symbol.CL_WITH_HSYMBOLS_USER.asPackage();
-    for(Symbol s : PACKAGE_CL.getAccessibleSymbols()) {
-          Symbol.CL_WITH_HSYMBOLS.importSymbol(s, new SimpleString(s.getName().toLowerCase()));
-          Symbol.CL_WITH_HSYMBOLS.export(s);
-    }
-    Symbol.CL_WITH_HSYMBOLS_USER.useNamespace(Symbol.CL_WITH_HSYMBOLS);
   }
 
   // End-of-file marker.
@@ -1660,7 +1654,7 @@ public final class Lisp
           if (obj instanceof Package)     
                   return (Package) obj;
           if(obj instanceof Symbol) { //Hierarchical symbols
-              return ((Symbol) obj).asPackage();
+              return ((Symbol) obj).ensurePackage();
           }
           return (Package) // Not reached.       
         type_error(obj, Symbol.PACKAGE);
@@ -1867,7 +1861,7 @@ public final class Lisp
       return (Package) obj;
     }
     if(obj == Symbol.ROOT_SYMBOL) {
-      return Symbol.ROOT_SYMBOL.asPackage();
+      return Symbol.ROOT_SYMBOL.ensurePackage();
     }
     String name = javaString(obj);
     Package namespace = getCurrentPackageOrRoot();
@@ -2270,7 +2264,7 @@ public final class Lisp
     public static final Package getCurrentPackageOrRoot() {
         Package currentPackage = getCurrentPackage(false);
         if(currentPackage == null) {
-            return Symbol.TOP_LEVEL_PACKAGES.asPackage();
+            return Symbol.TOP_LEVEL_PACKAGES.ensurePackage();
         } else {
             return currentPackage;
         }

@@ -651,9 +651,8 @@ interpreted toplevel form, non-NIL if it is 'simple enough'."
                 (SHADOW precompile-toplevel-form)
                 (%SET-FDEFINITION precompile-toplevel-form)
                 (MOP::ENSURE-METHOD process-toplevel-mop.ensure-method)
-                (symbol:|define-namespace| process-toplevel-defpackage/in-package)
-                (:|common-lisp-w/hsymbols|:|in-namespace| process-toplevel-defpackage/in-package)
-		(record-source-information-for-type process-record-source-information)))
+                (symbol:define-namespace process-toplevel-defpackage/in-package)
+                (record-source-information-for-type process-record-source-information)))
   (install-toplevel-handler (car pair) (cadr pair)))
 
 (declaim (ftype (function (t stream t) t) process-toplevel-form))

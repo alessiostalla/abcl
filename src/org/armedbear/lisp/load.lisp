@@ -54,15 +54,3 @@
 				     filespec
 				     (merge-pathnames (pathname filespec)))
 				 verbose print if-does-not-exist external-format)))
-
-#+nil
-(defun |common-lisp-w/hsymbols|:|load|
-    (filespec
-     &key
-     (verbose *load-verbose*)
-     (print *load-print*)
-     (if-does-not-exist t)
-     (external-format :default))
-  (let ((*readtable* (copy-readtable)))
-    (setf (readtable-case *readtable*) :preserve)
-    (load filespec :verbose verbose :print print :if-does-not-exist if-does-not-exist :external-format external-format)))

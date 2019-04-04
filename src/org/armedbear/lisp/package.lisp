@@ -119,23 +119,23 @@
                                       package-designator)))
 
 ;;Hierarchical symbols
-(defun symbol:|import| (symbol &key (namespace *package*) (name (symbol-name symbol)))
+(defun symbol:|import| (symbol &key (namespace *package*))
   (let* ((ns (cond
                ((symbolp namespace) namespace)
                ((packagep namespace) (package:|symbol| namespace))
                (t (error 'type-error :datum namespace :expected-type '(or symbol package)))))
-         (local-sym (symbol:|find| name ns)))
+         (local-sym (symbol:|find| (symbol-name symbol) ns)))
     (restart-case
         (progn
-          (when (and local-sym (not (eql symbol local-sym)))
+          (when (and local-sym (not (eq symbol local-sym)))
             (error 'package-error
                    "A different symbol (~A) is already accessible in symbol ~A with the same name (~A)."
                     local-sym (symbol-name ns) name))
           (symbol::%import symbol ns name))
-      (remove-existing ()
-        :report (lambda (s) (format s "Remove ~S from ~S and continue" local-sym ns))
-        (symbol:|remove-alias| ns name)
-        (symbol::%import symbol ns name))
+      (unintern-existing ()
+        :report (lambda (s) (format s "Unintern ~S from ~S and continue" local-sym ns))
+        (unintern local-sym)
+        (symbol::%import symbol ns))
       (do-nothing ()
         :report "Do nothing")))
   symbol)

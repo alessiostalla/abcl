@@ -68,7 +68,7 @@ public final class PackageFunctions
         @Override
         public LispObject execute(LispObject arg)
         {
-            return coerceToPackage(arg).packageNicknames();
+          return Symbol.MAPCAR.execute(Symbol.SYMBOL_NAME, coerceToPackage(arg).packageNicknames());
         }
     };
 
@@ -358,8 +358,8 @@ public final class PackageFunctions
             // FIXME docString is ignored
             // LispObject docString = args[10];
             if (symbol.isPackage())
-                return symbol.asPackage();
-            Package pkg = symbol.asPackage();
+                return symbol.ensurePackage();
+            Package pkg = symbol.ensurePackage();
             if (nicknames != NIL) {
                 LispObject list = nicknames;
                 while (list != NIL) {
@@ -408,7 +408,7 @@ public final class PackageFunctions
                     Package p = currentpkg.findPackage(string.getStringValue());
                     if (p == null)
                         return error(new LispError(obj.princToString() +
-                                                    " is not the name of a package. 1"));
+                                                    " is not the name of a package."));
                     pkg.usePackage(p);
                 }
                 use = use.cdr();

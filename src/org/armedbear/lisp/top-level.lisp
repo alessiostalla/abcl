@@ -431,9 +431,3 @@
               (repl)
             (stream-error (c) (declare (ignore c)) (return-from top-level-loop)))
           (repl)))))
-
-(defun ext:CL-W/HIERARCHICAL-SYMBOLS ()
-  (let ((readtable (copy-readtable)))
-    (setf *package* (symbol:|as-package| :|common-lisp-w/hsymbols-user|))
-    (setf (readtable-case *readtable*) :preserve)
-    readtable))

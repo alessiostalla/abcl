@@ -77,10 +77,17 @@ public class Symbol extends LispObject implements java.io.Serializable
             public LispObject NAME() {
               return NAME;
             }
+
+          @Override
+          protected Symbol addSymbol(String name) {
+            Symbol symbol = new Symbol(name, this);
+            symbol.initializeConstant(symbol);
+            externalSymbols.put(name, symbol);
+            return symbol;
+          }
         };
         {
             initializeConstant(this);
-            //alias(this, "", false); //The root is also a top-level package
         }
 
       @Override
@@ -89,20 +96,16 @@ public class Symbol extends LispObject implements java.io.Serializable
       }
 
       @Override
-      protected Symbol addSymbol(String name) {
-          Symbol symbol = new Symbol(name, this);
-          symbol.initializeConstant(symbol);
-          this.externalSymbols.put(name, symbol);
-          return symbol;
-      }
-
-      @Override
-      public Package asPackage() {
+      public Package ensurePackage() {
           return packageView;
       }
 
+      @Override
+      public Package checkPackage() {
+        return packageView;
+      }
 
-        @Override
+      @Override
         public boolean isPackage() {
             return true;
         }
@@ -113,21 +116,10 @@ public class Symbol extends LispObject implements java.io.Serializable
         }
 
     };
-  public static final Symbol TOP_LEVEL_PACKAGES = ROOT_SYMBOL.intern("TOP-LEVEL-PACKAGES");
+  public static final Symbol TOP_LEVEL_PACKAGES = ROOT_SYMBOL.ensurePackage().intern("TOP-LEVEL-PACKAGES");
     static {
-        TOP_LEVEL_PACKAGES.asPackage();
-        TOP_LEVEL_PACKAGES.externalSymbols.put("KEYWORD", ROOT_SYMBOL);
+        TOP_LEVEL_PACKAGES.ensurePackage().externalSymbols.put("KEYWORD", ROOT_SYMBOL);
     }
-
-  /** Symbols internal to the package. */
-  protected transient final ConcurrentHashMap<String, Symbol> internalSymbols
-    = new ConcurrentHashMap<String, Symbol>(16);
-  /** Symbols exported from the package.
-   *
-   * Those symbols in this collection are not contained in the internalSymbols
-   */
-  protected transient final ConcurrentHashMap<String, Symbol> externalSymbols
-    = new ConcurrentHashMap<String, Symbol>(16);
 
   private Package packageView;
 
@@ -176,16 +168,24 @@ public class Symbol extends LispObject implements java.io.Serializable
     this.parent = parent.getSymbol();
   }
 
-  public synchronized Package asPackage() {
+  public synchronized Package ensurePackage() {
     if(packageView == null) {
       packageView = new Package(this);
     }
     return packageView;
   }
 
-    public boolean isPackage() {
-        return !internalSymbols.isEmpty() || !externalSymbols.isEmpty() || packageView != null;
-    }
+  public void setPackageView(Package packageView) {
+    this.packageView = packageView;
+  }
+
+  public boolean isPackage() {
+    return packageView != null;
+  }
+
+  public void deletePackage() {
+    packageView = null;
+  }
 
     @Override
     @SuppressWarnings("FinalizeDeclaration")
@@ -229,7 +229,7 @@ public class Symbol extends LispObject implements java.io.Serializable
         if (parent != NIL)
           {
             sb.append(", an ");
-            Symbol sym = parent.findExternalSymbol(name);
+            Symbol sym = ((Package) getPackage()).findExternalSymbol(name);
             sb.append(sym == this ? "external" : "internal");
             sb.append(" symbol in the ");
             sb.append(parent.getName());
@@ -298,7 +298,7 @@ public class Symbol extends LispObject implements java.io.Serializable
     if(parent == NIL) {
       return NIL;
     }
-    return parent.asPackage();
+    return parent.ensurePackage();
   }
 
   @Override
@@ -367,7 +367,7 @@ public class Symbol extends LispObject implements java.io.Serializable
     if (parent == ROOT_SYMBOL)
       return ":".concat(n);
     StringBuilder sb = new StringBuilder(parent.getName());
-    if (parent.findExternalSymbol(name) != null)
+    if (((Package) getPackage()).findExternalSymbol(name) != null)
       sb.append(':');
     else
       sb.append("::");
@@ -566,7 +566,7 @@ public class Symbol extends LispObject implements java.io.Serializable
     String canonicalName;
       //Initially, with respect to the parent symbol, if any
     if(parent != NIL) {
-        List<String> localNames = parent.getLocalNames(this);
+        List<String> localNames = ((Package) getPackage()).getLocalNames(this);
         canonicalName = localNames.isEmpty() ? this.name.getStringValue() : localNames.get(0);
     } else {
         canonicalName = this.name.getStringValue();
@@ -587,7 +587,7 @@ public class Symbol extends LispObject implements java.io.Serializable
         String s = printReadably(canonicalName, currentPackage);
         return s;
     }
-      List<String> localNames = currentPackage.getSymbol().getLocalNames(this);
+      List<String> localNames = currentPackage.getLocalNames(this);
       if(!localNames.isEmpty()) {
           canonicalName = localNames.get(0);
       }
@@ -598,7 +598,7 @@ public class Symbol extends LispObject implements java.io.Serializable
     // Printer escaping is enabled.
     String accessibleName = null;
       if(parent != ROOT_SYMBOL) { //Always print keywords as :<name-in-root-namespace> per ANSI standard
-          accessibleName = currentPackage.getSymbol().getAccessibleName(this);
+          accessibleName = currentPackage.getAccessibleName(this);
       }
     if (accessibleName != null) {
         canonicalName = accessibleName;
@@ -636,7 +636,7 @@ public class Symbol extends LispObject implements java.io.Serializable
         sb.append(":");
     } else if(parent != TOP_LEVEL_PACKAGES) {
         sb.append(parent.printObject());
-        if (parent.findExternalSymbol(canonicalName) != null
+        if (((Package) getPackage()).findExternalSymbol(canonicalName) != null
             && DOUBLE_COLON_PACKAGE_SEPARATORS.symbolValue(thread) == NIL) {
             sb.append(':');
         } else {
@@ -644,7 +644,7 @@ public class Symbol extends LispObject implements java.io.Serializable
         }
     }
     //TODO Alessio verify that local nicknames work
-    /*if (currentPackage.getLocallyNicknamedPackages().contains(parent.asPackage())) {
+    /*if (currentPackage.getLocallyNicknamedPackages().contains(parent.ensurePackage())) {
       LispObject nicknames = currentPackage.getLocalPackageNicknames();
       while (nicknames != NIL) {
         if (nicknames.car().cdr() == parent) {
@@ -1032,7 +1032,7 @@ public class Symbol extends LispObject implements java.io.Serializable
 
     public Object readResolve() throws java.io.ObjectStreamException {
 	if(parent != NIL) {
-	    Symbol s = parent.intern(name.getStringValue()); //TODO Alessio shouldn't it be findSymbol?
+	    Symbol s = ((Package) getPackage()).intern(name.getStringValue()); //TODO Alessio shouldn't it be findSymbol?
 	    return s;
 	} else {
 	    return this;
@@ -1054,963 +1054,9 @@ public class Symbol extends LispObject implements java.io.Serializable
         return sb.toString();
     }
 
-  public void makeSymbolsUninterned(ConcurrentHashMap symbolMap) {
-        Symbol sym;
-        for (Iterator<Symbol> it = symbolMap.values().iterator();
-                it.hasNext();) {
-            sym = it.next();
-            if (sym.parent == this) {
-                sym.setParent(NIL);
-            }
-        }
-        symbolMap.clear();
-    }
 
-  //Should be deprecated
-    public final synchronized void delete()
-    {
-        if(getUseList() instanceof Cons) {
-            LispObject usedPackages = getUseList();
-            while (usedPackages != NIL) {
-                Symbol pkg = (Symbol) usedPackages.car();
-                unuseNamespace(pkg);
-                usedPackages = usedPackages.cdr();
-            }
-        }
 
-      List<Symbol> usedByList = getUsedBy();
-      if (usedByList != null) {
-          while (!usedByList.isEmpty()) {
-            usedByList.get(0).unuseNamespace(this);
-          }
-        }
 
-        makeSymbolsUninterned(internalSymbols);
-        makeSymbolsUninterned(externalSymbols);
-
-        List<Symbol> parents = new ArrayList<Symbol>();
-        if(parent != NIL) {
-          if(parent.canUnintern(this)) {
-            parents.add(parent);
-          }
-        }
-        Map<Symbol, List<String>> aliases = getAliases();
-        if(aliases != null) {
-            for (Symbol symbol : aliases.keySet()) {
-                if (symbol.canUnintern(this)) {
-                    parents.add(symbol);
-                }
-            }
-        }
-        //TODO Alessio concurrency
-        for(Symbol symbol : parents) {
-          symbol.unintern(this, symbol.getLocalNames(this));
-        }
-
-        remprop(this, ALIASES);
-    }
-
-    public final synchronized void rename(String newName, LispObject newNicks) {
-      if(parent == NIL) {
-        error(new LispError("Cannot rename uninterned symbol " + this));
-        return;
-      }
-
-        ArrayList<String> arrayList = null;
-        while (newNicks != NIL) {
-            if (arrayList == null)
-                arrayList = new ArrayList<String>();
-            String nick = javaString(newNicks.car());
-            Symbol existing = parent.internalSymbols.get(nick);
-            if(existing != null && existing != this) {
-              error(new LispError("A package named " + nick + " already exists."));
-              return;
-            }
-            arrayList.add(nick);
-            newNicks = newNicks.cdr();
-        }
-        // Remove old name and nicknames from Packages map.
-        synchronized(parent) {
-          if(parent.internalSymbols.contains(newName)) {
-            error(new LispError("A package named " + newName + " already exists."));
-            return;
-          }
-          Symbol oldPkg = parent;
-          parent.unintern(this);
-          parent = oldPkg;
-          parent.internalSymbols.put(newName, this); //TODO Alessio if it was exported, reexport?
-          if(arrayList != null) {
-            for(String nick : arrayList) {
-                parent.alias(this, nick, false);
-            }
-          }
-        }
-        // Now change the names...
-        name = new SimpleString(newName);
-    }
-
-    public Symbol findInternalSymbol(SimpleString name)
-    {
-        return internalSymbols.get(name.toString());
-    }
-
-    public Symbol findInternalSymbol(String name)
-    {
-        return internalSymbols.get(name);
-    }
-
-    public Symbol findExternalSymbol(SimpleString name)
-    {
-        return externalSymbols.get(name.toString());
-    }
-
-    public Symbol findExternalSymbol(String name)
-    {
-        return externalSymbols.get(name);
-    }
-
-    public Symbol findExternalSymbol(SimpleString name, int hash)
-    {
-        return externalSymbols.get(name.toString());
-    }
-
-    // Returns null if symbol is not accessible in this package.
-    public Symbol findAccessibleSymbol(SimpleString name)
-
-    {
-        return findAccessibleSymbol(name.toString());
-    }
-
-    // Returns null if symbol is not accessible in this package.
-    public Symbol findAccessibleSymbol(String name) {
-        // Look in external and internal symbols of this package.
-        Symbol symbol = externalSymbols.get(name);
-        if (symbol != null)
-            return symbol;
-        symbol = internalSymbols.get(name);
-        if (symbol != null)
-            return symbol;
-        // Look in external symbols of used packages.
-        if (getUseList() instanceof Cons) {
-            LispObject usedPackages = getUseList();
-            while (usedPackages != NIL) {
-                Symbol pkg = (Symbol) usedPackages.car();
-                symbol = pkg.findExternalSymbol(name);
-                if (symbol != null)
-                    return symbol;
-                usedPackages = usedPackages.cdr();
-            }
-        }
-        // Not found.
-        return null;
-    }
-
-    public String getAccessibleName(Symbol symbol) {
-        return getAccessibleName(symbol, new HashSet<Symbol>(), false);
-    }
-
-    //TODO ALessio does not work
-    protected String getAccessibleName(Symbol symbol, Set<Symbol> alreadySeen, boolean external) {
-        List<String> localNames = getLocalNames(symbol);
-        if(external) {
-            for(String localName : localNames) {
-                if(externalSymbols.containsKey(localName)) {
-                    return localName;
-                }
-            }
-        } else if(!localNames.isEmpty()) {
-            return localNames.get(0);
-        }
-        // Look in external symbols of used packages.
-        LispObject usedPackages = getUseList();
-        if (usedPackages instanceof Cons) {
-            while (usedPackages != NIL) {
-                Symbol pkg = (Symbol) usedPackages.car();
-                if(!alreadySeen.contains(pkg)) {
-                    alreadySeen.add(pkg);
-                    String accessibleName = pkg.getAccessibleName(symbol, alreadySeen, true);
-                    if(accessibleName != null) {
-                        Symbol other = internalSymbols.get(accessibleName);
-                        if(other == null || other == symbol) {
-                            return accessibleName;
-                        }
-                        other = externalSymbols.get(accessibleName);
-                        if(other == null || other == symbol) {
-                            return accessibleName;
-                        }
-                    }
-                }
-                usedPackages = usedPackages.cdr();
-            }
-        }
-        // Not found.
-        return null;
-    }
-
-    public LispObject findSymbol(String name)
-
-    {
-        final SimpleString s = new SimpleString(name);
-        final LispThread thread = LispThread.currentThread();
-        // Look in external and internal symbols of this package.
-        Symbol symbol = externalSymbols.get(name);
-        if (symbol != null)
-            return thread.setValues(symbol, Keyword.EXTERNAL);
-        symbol = internalSymbols.get(name);
-        if (symbol != null)
-            return thread.setValues(symbol, Keyword.INTERNAL);
-        // Look in external symbols of used packages.
-        if (getUseList() instanceof Cons) {
-            LispObject usedPackages = getUseList();
-            while (usedPackages != NIL) {
-                Symbol pkg = (Symbol) usedPackages.car();
-                symbol = pkg.findExternalSymbol(s);
-                if (symbol != null)
-                    return thread.setValues(symbol, Keyword.INHERITED);
-                usedPackages = usedPackages.cdr();
-            }
-        }
-        // Not found.
-        return thread.setValues(NIL, NIL);
-    }
-
-    // Helper function to add NIL to PACKAGE_CL.
-    //TODO Alessio there must be another way...
-    public void addSymbol(Symbol symbol)
-    {
-        Debug.assertTrue(symbol.parent == this);
-        Debug.assertTrue(symbol.getName().equals("NIL"));
-        externalSymbols.put(symbol.name.toString(), symbol);
-    }
-
-    protected Symbol addSymbol(String name) {
-        Symbol symbol = new Symbol(name, this);
-        internalSymbols.put(name, symbol);
-        return symbol;
-    }
-
-    private Symbol addSymbol(SimpleString name)
-    {
-        return addSymbol(name.toString());
-    }
-
-    public Symbol addInternalSymbol(String symbolName)
-    {
-        final Symbol symbol = new Symbol(symbolName, this);
-        internalSymbols.put(symbolName, symbol);
-        return symbol;
-    }
-
-    public Symbol addExternalSymbol(String symbolName)
-    {
-        final Symbol symbol = new Symbol(symbolName, this);
-        externalSymbols.put(symbolName, symbol);
-        return symbol;
-    }
-
-    public synchronized Symbol intern(SimpleString symbolName)
-    {
-        return intern(symbolName.toString());
-    }
-
-    public synchronized Symbol intern(String symbolName)
-    {
-        // Look in external and internal symbols of this package.
-        Symbol symbol = externalSymbols.get(symbolName);
-        if (symbol != null)
-            return symbol;
-        symbol = internalSymbols.get(symbolName);
-        if (symbol != null)
-            return symbol;
-        // Look in external symbols of used packages.
-        if (getUseList() instanceof Cons) {
-            LispObject usedPackages = getUseList();
-            while (usedPackages != NIL) {
-                Symbol pkg = (Symbol) usedPackages.car();
-                symbol = pkg.externalSymbols.get(symbolName);
-                if (symbol != null)
-                    return symbol;
-                usedPackages = usedPackages.cdr();
-            }
-        }
-        // Not found.
-        return addSymbol(symbolName);
-    }
-
-    public synchronized Symbol intern(final SimpleString s,
-                                      final LispThread thread)
-    {
-        // Look in external and internal symbols of this package.
-        Symbol symbol = externalSymbols.get(s.toString());
-        if (symbol != null)
-            return (Symbol) thread.setValues(symbol, Keyword.EXTERNAL);
-        symbol = internalSymbols.get(s.toString());
-        if (symbol != null)
-            return (Symbol) thread.setValues(symbol, Keyword.INTERNAL);
-        // Look in external symbols of used packages.
-        if (getUseList() instanceof Cons) {
-            LispObject usedPackages = getUseList();
-            while (usedPackages != NIL) {
-                Symbol pkg = (Symbol) usedPackages.car();
-                symbol = pkg.findExternalSymbol(s);
-                if (symbol != null)
-                    return (Symbol) thread.setValues(symbol, Keyword.INHERITED);
-                usedPackages = usedPackages.cdr();
-            }
-        }
-        // Not found.
-        return (Symbol) thread.setValues(addSymbol(s), NIL);
-    }
-
-    public synchronized Symbol internAndExport(String symbolName)
-
-    {
-        final SimpleString s = new SimpleString(symbolName);
-        // Look in external and internal symbols of this package.
-        Symbol symbol = externalSymbols.get(symbolName);
-        if (symbol != null)
-            return symbol;
-        symbol = internalSymbols.get(symbolName);
-        if (symbol != null) {
-            export(symbol);
-            return symbol;
-        }
-        if (getUseList() instanceof Cons) {
-            // Look in external symbols of used packages.
-            LispObject usedPackages = getUseList();
-            while (usedPackages != NIL) {
-                Symbol pkg = (Symbol) usedPackages.car();
-                symbol = pkg.findExternalSymbol(s);
-                if (symbol != null) {
-                    export(symbol);
-                    return symbol;
-                }
-                usedPackages = usedPackages.cdr();
-            }
-        }
-        // Not found.
-        symbol = addSymbol(s);
-        internalSymbols.remove(symbolName);
-        externalSymbols.put(symbolName, symbol);
-        return symbol;
-    }
-
-    public synchronized LispObject unintern(final Symbol symbol) {
-      List<String> symbolNames = getLocalNames(symbol);
-      boolean found = canUnintern(symbol, symbolNames);
-      if (!found) {
-        return NIL;
-      }
-
-      unintern(symbol, symbolNames);
-      return T;
-    }
-
-  protected boolean canUnintern(Symbol symbol) {
-    return canUnintern(symbol, getLocalNames(symbol));
-  }
-
-  protected boolean canUnintern(Symbol symbol, List<String> symbolNames) {
-    boolean found = false;
-    for (String symbolName : symbolNames) {
-      if (canUnintern(symbol, symbolName)) {
-        found = true;
-      }
-    }
-    return found;
-  }
-
-  protected boolean canUnintern(Symbol symbol, String symbolName) {
-    Map<String, Symbol> shadowingSymbols = getShadowingSymbolsMap();
-    if (shadowingSymbols != null && shadowingSymbols.get(symbolName) == symbol) {
-      // Check for conflicts that might be exposed in used package list
-      // if we remove the shadowing symbol.
-      Symbol sym = null;
-      if (getUseList() instanceof Cons) {
-        LispObject usedPackages = getUseList();
-        while (usedPackages != NIL) {
-          Symbol pkg = (Symbol) usedPackages.car();
-          Symbol s = pkg.findExternalSymbol(symbol.name);
-          if (s != null) {
-            if (sym == null)
-              sym = s;
-            else if (sym != s) {
-              StringBuilder sb =
-                new StringBuilder("Uninterning the symbol ");
-              sb.append(symbol.getQualifiedName());
-              sb.append(" causes a name conflict between ");
-              sb.append(sym.getQualifiedName());
-              sb.append(" and ");
-              sb.append(s.getQualifiedName());
-              error(new PackageError(sb.toString(), asPackage()));
-              return false;
-            }
-          }
-          usedPackages = usedPackages.cdr();
-        }
-      }
-    }
-    if (externalSymbols.get(symbolName) == symbol) {
-      return true;
-    }
-    if (internalSymbols.get(symbolName) == symbol) {
-      return true;
-    }
-    return false;
-  }
-
-  protected synchronized void unintern(Symbol symbol, List<String> symbolNames) {
-    internalSymbols.keySet().removeAll(symbolNames);
-    externalSymbols.keySet().removeAll(symbolNames);
-    Map<String, Symbol> shadowingSymbols = getShadowingSymbolsMap();
-    if(shadowingSymbols != null) {
-      shadowingSymbols.keySet().removeAll(symbolNames);
-    }
-
-    if (symbol.getParent() == this) {
-        symbol.setParent(NIL);
-    }
-  }
-
-    /**
-     * Returns the list of local names of symbol in this namespace.
-     * @param symbol
-     * @return
-     */
-    public List<String> getLocalNames(Symbol symbol) {
-        List<String> symbolNames = new ArrayList<String>();
-        if (findAccessibleSymbol(symbol.getName()) == symbol) {
-            symbolNames.add(symbol.getName());
-        }
-
-        Map<Symbol, List<String>> aliases = symbol.getAliases();
-        if (aliases != null) {
-            List<String> names = aliases.get(this);
-            if(names != null) {
-                for (String alias : names) {
-                    symbolNames.add(alias);
-                }
-            }
-        }
-        return symbolNames;
-    }
-
-    public synchronized void importSymbol(Symbol symbol) {
-      importSymbol(symbol, symbol.name);
-    }
-  
-    public synchronized void importSymbol(Symbol symbol, SimpleString name)
-    {
-        Symbol sym = findAccessibleSymbol(name);
-        if (sym != null && sym != symbol) {
-            StringBuilder sb = new StringBuilder("The symbol ");
-            sb.append(name);
-            sb.append(", or ");
-            sb.append(sym.getQualifiedName());
-            sb.append(", is already accessible in package ");
-            sb.append(this.getQualifiedName());
-            sb.append('.');
-            error(new PackageError(sb.toString(), asPackage()));
-        }
-        alias(symbol, name.toString(), false);
-        if (symbol.parent == NIL)
-            symbol.setParent(this);
-    }
-
-    public synchronized void export(final Symbol symbol)
-    {
-        export(symbol, null);
-    }
-
-    protected void export(Symbol symbol, String symbolName) {
-        List<String> localNames = getLocalNames(symbol);
-        if(localNames.isEmpty() || (symbolName != null && !localNames.contains(symbolName))) {
-            StringBuilder sb = new StringBuilder("The symbol ");
-            sb.append(symbol.getQualifiedName());
-            sb.append(" is not accessible in package ");
-            sb.append(name);
-            sb.append(" as ");
-            sb.append(symbolName);
-            sb.append('.');
-            error(new PackageError(sb.toString(), asPackage()));
-            return;
-        }
-        if(symbolName == null) {
-            symbolName = localNames.get(0);
-        }
-        boolean added = false;
-        if (symbol.parent != this) {
-            Symbol sym = findAccessibleSymbol(symbolName);
-            if (sym != symbol) {
-                StringBuilder sb = new StringBuilder("The symbol ");
-                sb.append(symbol.getQualifiedName());
-                sb.append(" is not accessible in package ");
-                sb.append(name);
-                sb.append('.');
-                error(new PackageError(sb.toString(), asPackage()));
-                return;
-            }
-            internalSymbols.put(symbolName, symbol);
-            added = true;
-        }
-        if (added || internalSymbols.get(symbolName.toString()) == symbol) {
-            if (getUsedBy() != null) {
-                for (Symbol pkg : getUsedBy()) {
-                    Symbol sym = pkg.findAccessibleSymbol(symbolName);
-                    if (sym != null && sym != symbol) {
-                        Map<String, Symbol> shadowingSymbols = pkg.getShadowingSymbolsMap();
-                        if (shadowingSymbols != null &&
-                            shadowingSymbols.get(symbolName) == sym) {
-                            // OK.
-                        } else {
-                            StringBuilder sb = new StringBuilder("The symbol ");
-                            sb.append(sym.getQualifiedName());
-                            sb.append(" is already accessible in package ");
-                            sb.append(pkg.getName());
-                            sb.append('.');
-                            error(new PackageError(sb.toString(), pkg));
-                            return;
-                        }
-                    }
-                }
-            }
-            // No conflicts.
-            internalSymbols.remove(symbolName.toString());
-            externalSymbols.put(symbolName.toString(), symbol);
-            return;
-        }
-        if (externalSymbols.get(symbolName.toString()) == symbol)
-            // Symbol is already exported; there's nothing to do.
-            return;
-        StringBuilder sb = new StringBuilder("The symbol ");
-        sb.append(symbol.getQualifiedName());
-        sb.append(" is not accessible in package ");
-        sb.append(name);
-        sb.append('.');
-        error(new PackageError(sb.toString(), asPackage()));
-    }
-
-    public synchronized void unexport(final Symbol symbol)
-
-    {
-      if (externalSymbols.get(symbol.name.toString()) == symbol) {
-        externalSymbols.remove(symbol.name.toString());
-        internalSymbols.put(symbol.name.toString(), symbol);
-      } else if (findAccessibleSymbol(symbol.name.toString()) != symbol) {
-        StringBuilder sb = new StringBuilder("The symbol ");
-        sb.append(symbol.getQualifiedName());
-        sb.append(" is not accessible in package ");
-        sb.append(name);
-        error(new PackageError(sb.toString(), asPackage()));
-      }
-    }
-
-    public synchronized void shadow(final String symbolName)
-
-    {
-        Map<String, Symbol> shadowingSymbols = getShadowingSymbolsMap();
-        if (shadowingSymbols == null) {
-            shadowingSymbols = new HashMap<String, Symbol>();
-            setShadowingSymbolsMap(shadowingSymbols);
-        }
-        final SimpleString s = new SimpleString(symbolName);
-        Symbol symbol = externalSymbols.get(s.toString());
-        if (symbol != null) {
-            shadowingSymbols.put(symbolName, symbol);
-            return;
-        }
-        symbol = internalSymbols.get(s.toString());
-        if (symbol != null) {
-            shadowingSymbols.put(symbolName, symbol);
-            return;
-        }
-        if (shadowingSymbols.get(symbolName) != null)
-            return;
-        symbol = new Symbol(s, this);
-        internalSymbols.put(s.toString(), symbol);
-        shadowingSymbols.put(symbolName, symbol);
-    }
-
-    public synchronized Symbol alias(Symbol symbol, String name, boolean export) {
-        /*if (symbol.getParent() != this) {
-            error(new PackageError("Cannot alias a symbol with another home package")); //TODO Alessio handle? Use another condition type?
-            return NIL;
-        }*/
-        Symbol other = checkExistingSymbol(symbol, name, internalSymbols);
-        if (other != null) return other;
-        other = checkExistingSymbol(symbol, name, externalSymbols);
-        if (other != null) return other;
-        if(export) {
-          externalSymbols.put(name, symbol);
-        } else {
-          internalSymbols.put(name, symbol);
-        }
-        if(!name.equals(symbol.getName())) {
-            Map<Symbol, List<String>> aliases = symbol.getAliases();
-            if(aliases == null) {
-                aliases = new HashMap<Symbol, List<String>>();
-                symbol.setAliases(aliases);
-            }
-            List<String> nicknames = aliases.get(this);
-            if (nicknames == null) {
-                nicknames = new ArrayList<String>();
-                aliases.put(this, nicknames);
-            }
-            nicknames.add(name);
-        }
-        return symbol;
-    }
-
-    protected static Symbol checkExistingSymbol(Symbol symbol, String name, ConcurrentHashMap<String, Symbol> internalSymbols) {
-        Symbol other = internalSymbols.get(name);
-        if(other != null) {
-            if (other == symbol) {
-                return symbol;
-            } else {
-              error(new PackageError("A symbol named " + name + " already exists.", new SimpleString(name))); //TODO Alessio distinguish alias package from alias symbol
-                return NIL;
-            }
-        }
-        return null;
-    }
-
-    public synchronized Symbol removeAlias(String name) {
-        Symbol symbol = internalSymbols.get(name);
-        if(symbol == null) {
-            symbol = externalSymbols.get(name);
-        }
-        if(symbol == null) {
-            return null;
-        }
-        /* TODO Alessio evaluate the consequences
-         if(symbol.getName().equals(name)) {
-            error(new LispError(name + " is not an alias"));
-            return NIL;
-        }*/
-        if(canUnintern(symbol, name)) {
-            internalSymbols.remove(name);
-            externalSymbols.remove(name);
-            Map<Symbol, List<String>> aliases = symbol.getAliases();
-            if(aliases != null) {
-                List<String> nicknames = aliases.get(this);
-                nicknames.remove(name);
-            }
-            return symbol;
-        } else {
-            return null;
-        }
-    }
-
-    public synchronized void shadowingImport(Symbol symbol)
-    {
-        final String symbolName = symbol.getName();
-        Symbol sym = externalSymbols.get(symbolName);
-        if (sym == null)
-            sym = internalSymbols.get(symbol.name.toString());
-
-        // if a different symbol with the same name is accessible,
-        // [..] which implies that it must be uninterned if it was present
-        Map<String, Symbol> shadowingSymbols = getShadowingSymbolsMap();
-        if (sym != null && sym != symbol) {
-            if (shadowingSymbols != null)
-                shadowingSymbols.remove(symbolName);
-            unintern(sym);
-        }
-
-        if (sym == null || sym != symbol) {
-            // there was no symbol, or we just unintered it another one
-            // intern the new one
-            internalSymbols.put(symbol.name.toString(), symbol);
-        }
-
-        if (shadowingSymbols == null) {
-            shadowingSymbols = new HashMap<String, Symbol>();
-            setShadowingSymbolsMap(shadowingSymbols);
-        }
-        shadowingSymbols.put(symbolName, symbol);
-    }
-
-    // "USE-PACKAGE causes PACKAGE to inherit all the external symbols of
-    // PACKAGES-TO-USE. The inherited symbols become accessible as internal
-    // symbols of PACKAGE."
-    public void useNamespace(Symbol pkg)
-    {
-        if (!memq(pkg, getUseList())) {
-            // "USE-PACKAGE checks for name conflicts between the newly
-            // imported symbols and those already accessible in package."
-	  Collection<Symbol> symbols = pkg.getExternalSymbols(); //TODO alessio should be a map!
-            for (Symbol symbol : symbols) {
-                Symbol existing = findAccessibleSymbol(symbol.name);
-                if (existing != null && existing != symbol) {
-                    Map<String, Symbol> shadowingSymbols = getShadowingSymbolsMap();
-                    if (shadowingSymbols == null ||
-                            shadowingSymbols.get(symbol.getName()) == null) {
-                        error(new PackageError("A symbol named " + symbol.getName() +
-                                " is already accessible in package " +
-                                               name + ".", asPackage()));
-                        return;
-                    }
-                }
-            }
-            setUseList(getUseList().push(pkg));
-            // Add this package to the used-by list of pkg.
-            if (pkg.getUsedBy() != null) {
-                Debug.assertTrue(!pkg.getUsedBy().contains(this));
-            } else {
-               pkg.setUsedBy(new ArrayList<Symbol>());
-            }
-            pkg.getUsedBy().add(this);
-        }
-    }
-
-    public void unuseNamespace(Symbol pkg)
-    {
-      LispObject useList = getUseList();
-      if (useList instanceof Cons) {
-            if (memq(pkg, useList)) {
-                // FIXME Modify the original list instead of copying it!
-                LispObject newList = NIL;
-                while (useList != NIL) {
-                    if (useList.car() != pkg)
-                        newList = newList.push(useList.car());
-                    useList = useList.cdr();
-                }
-                useList = newList.nreverse();
-                setUseList(useList);
-                Debug.assertTrue(!memq(pkg, useList));
-                Debug.assertTrue(pkg.getUsedBy() != null);
-                Debug.assertTrue(pkg.getUsedBy().contains(this));
-                pkg.getUsedBy().remove(this);
-            }
-        }
-    }
-
-    public final void addNickname(String s) {
-      if(parent != NIL) {
-        // This call will signal an error if there's a naming conflict.
-        parent.alias(this, s, false);
-      } else {
-        error(new LispError("Cannot add a nickname to an uninterned symbol"));
-      }
-    }
-
-    public Map<Symbol, List<String>> getAliases() {
-        JavaObject javaObject = (JavaObject) getf(getPropertyList(), ALIASES, null);
-        return javaObject == null ? null : (Map<Symbol, List<String>>) javaObject.getObject();
-    }
-
-    protected LispObject setAliases(Map<Symbol, List<String>> aliases) {
-        return put(this, ALIASES, new JavaObject(aliases));
-    }
-
-    public Map<String, Symbol> getShadowingSymbolsMap() {
-        JavaObject javaObject = (JavaObject) getf(getPropertyList(), SHADOWING_SYMBOLS, null);
-        return javaObject == null ? null : (Map<String, Symbol>) javaObject.getObject();
-    }
-
-    protected LispObject setShadowingSymbolsMap(Map<String, Symbol> shadowingSymbols) {
-      return put(this, SHADOWING_SYMBOLS, new JavaObject(shadowingSymbols));
-    }
-
-    public LispObject getUseList()
-    {
-      return getf(getPropertyList(), USE_LIST, NIL);
-    }
-
-    public LispObject setUseList(LispObject useList) {
-        return put(this, USE_LIST, useList);
-    }
-
-    public boolean uses(LispObject pkg)
-    {
-        return (getUseList() instanceof Cons) && memq(pkg, getUseList());
-    }
-
-    protected List<Symbol> getUsedBy() {
-      JavaObject javaObject = (JavaObject) getf(getPropertyList(), USED_BY_LIST, null);
-      return javaObject == null ? null : (List<Symbol>) javaObject.getObject();
-    }
-
-    protected LispObject setUsedBy(List<Symbol> usedByList) {
-        return put(this, USED_BY_LIST, new JavaObject(usedByList));
-    }
-
-    public LispObject getUsedByList()
-    {
-        LispObject list = NIL;
-        if (getUsedBy() != null) {
-            for (Iterator it = getUsedBy().iterator(); it.hasNext();) {
-                Symbol pkg = (Symbol) it.next();
-                list = new Cons(pkg.asPackage(), list);
-            }
-        }
-        return list;
-    }
-
-  public LispObject getLocalPackageNicknames() {
-      LispObject list = NIL;
-      for(Map.Entry<String, Symbol> entry : internalSymbols.entrySet()) {
-          Symbol symbol = entry.getValue();
-          if(symbol.isPackage() && !entry.getKey().equals(symbol.getName())) {
-              list = new Cons(new Cons(entry.getKey(), symbol), list);
-          }
-      }
-      for (Map.Entry<String, Symbol> entry : externalSymbols.entrySet()) {
-          Symbol symbol = entry.getValue();
-          if (symbol.isPackage() && !entry.getKey().equals(symbol.getName())) {
-              list = new Cons(new Cons(entry.getKey(), symbol), list);
-          }
-      }
-      return list;
-  }
-
-  public LispObject addLocalPackageNickname(String name, Symbol pack)
-  {
-    return alias(pack, name, false);
-  }
-
-  public LispObject removeLocalPackageNickname(String name)
-  {
-      LispObject result = removeAlias(name);
-      return result != null ? result : NIL;
-  }
-
-  public synchronized void removeLocalPackageNicknamesForPackage(Symbol p) {
-      if(p.getAliases() == null) {
-          return;
-      }
-      List<String> localNicknames = p.getAliases().get(this);
-      for(String nick : localNicknames) {
-          if(!canUnintern(p, nick)) {
-              return;
-          }
-      }
-      for(String nick : localNicknames) {
-          removeAlias(nick);
-      }
-  }
-
-    public Collection<Symbol> getAliasedSymbols() {
-        Collection<Symbol> aliasedSymbols = new HashSet<Symbol>();
-        for (Map.Entry<String, Symbol> entry : internalSymbols.entrySet()) {
-            Symbol symbol = entry.getValue();
-            if (!symbol.getName().equals(entry.getKey())) {
-                aliasedSymbols.add(symbol);
-            }
-        }
-        for (Map.Entry<String, Symbol> entry : externalSymbols.entrySet()) {
-            Symbol symbol = entry.getValue();
-            if (!symbol.getName().equals(entry.getKey())) {
-                aliasedSymbols.add(symbol);
-            }
-        }
-        return aliasedSymbols;
-    }
-
-    public LispObject getShadowingSymbols()
-    {
-        Map<String, Symbol> shadowingSymbols = getShadowingSymbolsMap();
-        LispObject list = NIL;
-        if (shadowingSymbols != null) {
-            for (Symbol symbol : shadowingSymbols.values()) {
-                list = new Cons(symbol, list);
-            }
-        }
-        return list;
-    }
-
-    public synchronized Collection<Symbol> getExternalSymbols()
-    {
-        return externalSymbols.values();
-    }
-
-    public synchronized List<Symbol> getAccessibleSymbols()
-    {
-        ArrayList<Symbol> list = new ArrayList<Symbol>();
-        list.addAll(internalSymbols.values());
-        list.addAll(externalSymbols.values());
-        if (getUseList() instanceof Cons) {
-            LispObject usedPackages = getUseList();
-            while (usedPackages != NIL) {
-                Symbol pkg = (Symbol) usedPackages.car();
-                list.addAll(pkg.externalSymbols.values());
-
-                usedPackages = usedPackages.cdr();
-            }
-        }
-        return list;
-    }
-
-    public synchronized LispObject PACKAGE_INTERNAL_SYMBOLS()
-    {
-        LispObject list = NIL;
-        Collection<Symbol> symbols = internalSymbols.values();
-        for (Symbol symbol : symbols) {
-            list = new Cons(symbol, list);
-        }
-        return list;
-    }
-
-    public synchronized LispObject PACKAGE_EXTERNAL_SYMBOLS()
-    {
-        LispObject list = NIL;
-        Collection<Symbol> symbols = externalSymbols.values();
-        for (Symbol symbol : symbols) {
-            list = new Cons(symbol, list);
-        }
-        return list;
-    }
-
-    public synchronized LispObject PACKAGE_INHERITED_SYMBOLS()
-    {
-        LispObject list = NIL;
-        if (getUseList() instanceof Cons) {
-            LispObject usedPackages = getUseList();
-            while (usedPackages != NIL) {
-                Symbol pkg = (Symbol) usedPackages.car();
-                Collection<Symbol> externals = pkg.getExternalSymbols();
-                for (Symbol symbol : externals) {
-                    Map<String, Symbol> shadowingSymbols = getShadowingSymbolsMap();
-                    if (shadowingSymbols != null && shadowingSymbols.get(symbol.getName()) != null)
-                        continue;
-                    if (externalSymbols.get(symbol.name.toString()) == symbol)
-                        continue;
-                    list = new Cons(symbol, list);
-                }
-                usedPackages = usedPackages.cdr();
-            }
-        }
-        return list;
-    }
-
-    public synchronized LispObject getSymbols()
-    {
-        LispObject list = NIL;
-        Collection<Symbol> internals = internalSymbols.values();
-        for (Symbol internal : internals) {
-            list = new Cons(internal, list);
-        }
-        Collection<Symbol> externals = externalSymbols.values();
-        for (Symbol external : externals) {
-            list = new Cons(external, list);
-        }
-        return list;
-    }
-
-    public synchronized Symbol[] symbols()
-    {
-        Collection<Symbol> internals = internalSymbols.values();
-        Collection<Symbol> externals = externalSymbols.values();
-        Symbol[] array = new Symbol[internals.size() + externals.size()];
-        int i = 0;
-        for (Symbol symbol : internals) {
-            array[i++] = symbol;
-        }
-        for (Symbol symbol : externals) {
-            array[i++] = symbol;
-        }
-        return array;
-    }
 
   public LispObject getProperty(Symbol variable, LispObject defaultValue) {
     final LispThread thread = LispThread.currentThread();
@@ -2034,7 +1080,7 @@ public class Symbol extends LispObject implements java.io.Serializable
   }
 
     // Packages.
-  public static final Package PACKAGE_KEYWORD = ROOT_SYMBOL.asPackage();
+  public static final Package PACKAGE_KEYWORD = ROOT_SYMBOL.ensurePackage();
   public static final Package PACKAGE_CL =
     Packages.createPackage("COMMON-LISP", 2048); // EH 10-10-2010: Actual number = 1014
   public static final Package PACKAGE_CL_USER =
@@ -4030,8 +3076,6 @@ public class Symbol extends LispObject implements java.io.Serializable
   // End of CL symbols.
 
   // Extensions.
-  public static final Symbol CL_W_HIERARCHICAL_SYMBOLS =
-      PACKAGE_EXT.addExternalSymbol("CL-W/HIERARCHICAL-SYMBOLS");
   public static final Symbol MOST_POSITIVE_JAVA_LONG =
     PACKAGE_EXT.addExternalSymbol("MOST-POSITIVE-JAVA-LONG");
   public static final Symbol MOST_NEGATIVE_JAVA_LONG=
@@ -4388,29 +3432,32 @@ public class Symbol extends LispObject implements java.io.Serializable
     PACKAGE_THREADS.addExternalSymbol("THREAD");
 
   //Hierarchical symbols
-  public static final Symbol CL_WITH_HSYMBOLS =
-          ROOT_SYMBOL.intern("common-lisp-w/hsymbols");
-  public static final Symbol CL_WITH_HSYMBOLS_USER =
-          ROOT_SYMBOL.intern("common-lisp-w/hsymbols-user");
-
-  public static final Symbol SYMBOL_ALIAS = SYMBOL.internAndExport("alias");
-  public static final Symbol SYMBOL_AS_PACKAGE = SYMBOL.internAndExport("as-package");
-  public static final Symbol SYMBOL_DEFINE_NAMESPACE = SYMBOL.internAndExport("define-namespace");
-  public static final Symbol SYMBOL_FIND = SYMBOL.internAndExport("find");
-  public static final Symbol SYMBOL_IMPORT = SYMBOL.internAndExport("import");
-  public static final Symbol SYMBOL_INTERN = SYMBOL.internAndExport("intern");
-  public static final Symbol SYMBOL_INTERN_HOOK = SYMBOL.internAndExport("intern-hook");
-  public static final Symbol SYMBOL_PARENT = SYMBOL.internAndExport("parent");
-  public static final Symbol SYMBOL_PROPERTY = SYMBOL.internAndExport("property");
-  public static final Symbol SYMBOL_REMOVE_ALIAS = SYMBOL.internAndExport("remove-alias");
-  public static final Symbol SYMBOL_REMOVE_PROPERTY = SYMBOL.internAndExport("remove-property");
-  public static final Symbol SYMBOL_ROOT = SYMBOL.internAndExport("root");
+  public static final Symbol SYMBOL_AS_PACKAGE = SYMBOL.ensurePackage().internAndExport("PACKAGE");
+  public static final Symbol SYMBOL_DEFINE_NAMESPACE = SYMBOL.ensurePackage().internAndExport("DEFINE-NAMESPACE");
+  public static final Symbol SYMBOL_FIND = SYMBOL.ensurePackage().internAndExport("find");
+  public static final Symbol SYMBOL_IMPORT = SYMBOL.ensurePackage().internAndExport("import");
+  public static final Symbol SYMBOL_INTERN = SYMBOL.ensurePackage().internAndExport("intern");
+  public static final Symbol SYMBOL_INTERN_HOOK = SYMBOL.ensurePackage().internAndExport("intern-hook");
+  public static final Symbol SYMBOL_PARENT = SYMBOL.ensurePackage().internAndExport("parent");
+  public static final Symbol SYMBOL_PROPERTY = SYMBOL.ensurePackage().internAndExport("property");
+  public static final Symbol SYMBOL_REMOVE_PROPERTY = SYMBOL.ensurePackage().internAndExport("remove-property");
+  public static final Symbol SYMBOL_ROOT = SYMBOL.ensurePackage().internAndExport("root");
   static {
     SYMBOL_ROOT.initializeConstant(ROOT_SYMBOL);
+    SYMBOL.ensurePackage();
+    PACKAGE.ensurePackage();
   }
-  public static final Symbol PACKAGE_SYMBOL = PACKAGE.internAndExport("symbol");
+  public static final Symbol PACKAGE_SYMBOL = PACKAGE.ensurePackage().internAndExport("symbol");
 
   // JVM
   public static final Symbol _RESIGNAL_COMPILER_WARINGS_ =
     PACKAGE_JVM.addExternalSymbol("*RESIGNAL-COMPILER-WARNINGS*");
+
+  public Package checkPackage() {
+    if(isPackage()) {
+      return packageView;
+    } else {
+      return (Package) error(new PackageError("Not a package: ~A", this));
+    }
+  }
 }

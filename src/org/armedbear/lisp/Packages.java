@@ -33,6 +33,7 @@
 
 package org.armedbear.lisp;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.armedbear.lisp.Lisp.NIL;
@@ -47,8 +48,8 @@ public final class Packages
 
   public static final synchronized Package createPackage(String name, int size)
   {
-    Symbol pkg = Symbol.TOP_LEVEL_PACKAGES.intern(name);
-    return pkg.asPackage();
+    Symbol pkg = Symbol.TOP_LEVEL_PACKAGES.ensurePackage().intern(name);
+    return pkg.ensurePackage();
   }
 
   /**
@@ -66,30 +67,33 @@ public final class Packages
   // nicknames.
   static final synchronized Package findPackageGlobally(String name)
   {
-    Symbol pkg = Symbol.TOP_LEVEL_PACKAGES.findAccessibleSymbol(name);
+    Symbol pkg = Symbol.TOP_LEVEL_PACKAGES.ensurePackage().findAccessibleSymbol(name);
     if(pkg == null || !pkg.isPackage()) {
       return null;
     }
-    return pkg.asPackage();
+    return pkg.ensurePackage();
   }
 
   public static final synchronized LispObject listAllTopLevelPackages()
   {
     LispObject result = NIL;
-    for (Symbol pkg : Symbol.TOP_LEVEL_PACKAGES.getAccessibleSymbols()) {
-      result = new Cons(pkg.asPackage(), result);
+    for (Symbol pkg : Symbol.TOP_LEVEL_PACKAGES.ensurePackage().getAccessibleSymbols()) {
+      if(pkg.isPackage()) {
+        result = new Cons(pkg.ensurePackage(), result);
+      }
     }
     return result;
   }
 
   public static final synchronized Package[] getAllTopLevelPackages()
   {
-    List<Symbol> symbols = Symbol.ROOT_SYMBOL.getAccessibleSymbols();
-    Package[] array = new Package[symbols.size()];
-    for(int i = 0; i < symbols.size(); i++) {
-      array[i] = symbols.get(i).asPackage();
+    List<Package> packages = new ArrayList<Package>();
+    for (Symbol pkg : Symbol.TOP_LEVEL_PACKAGES.ensurePackage().getAccessibleSymbols()) {
+      if(pkg.isPackage()) {
+        packages.add(pkg.ensurePackage());
+      }
     }
-    return array;
+    return packages.toArray(new Package[0]);
   }
 
   public static final synchronized LispObject getPackagesNicknamingPackage(Package thePackage)

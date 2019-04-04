@@ -495,7 +495,7 @@
      (with-compilation-unit ()
        (let ((*compile-file-zip* zip)
              failure-p)
-         (handler-bind (((or warning
+         (handler-bind (((or ;warning
                              compiler-error)
                          #'(lambda (c)
                              (declare (ignore c))
