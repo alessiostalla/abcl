@@ -79,10 +79,10 @@
         (doc nil)
         (symbol (if (symbolp symbol-or-string)
                    `(quote ,symbol-or-string)
-                   `(symbol:|intern|
+                   `(symbol:intern
                             ,(string symbol-or-string)
-                            ,(symbol:|intern| "TOP-LEVEL-PACKAGES" symbol:|root|)))))
-                            ;symbol:|root|))))
+                            ;,(symbol:intern "TOP-LEVEL-PACKAGES" symbol:root)))))
+                            symbol:root))))
     (dolist (option options)
       (unless (consp option)
         (error 'program-error "bad DEFPACKAGE option: ~S" option))

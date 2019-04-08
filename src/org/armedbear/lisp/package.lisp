@@ -119,12 +119,12 @@
                                       package-designator)))
 
 ;;Hierarchical symbols
-(defun symbol:|import| (symbol &key (namespace *package*))
+(defun symbol:import (symbol &key (namespace *package*))
   (let* ((ns (cond
-               ((symbolp namespace) namespace)
-               ((packagep namespace) (package:|symbol| namespace))
+               ((symbolp namespace) (symbol:package namespace))
+               ((packagep namespace) namespace)
                (t (error 'type-error :datum namespace :expected-type '(or symbol package)))))
-         (local-sym (symbol:|find| (symbol-name symbol) ns)))
+         (local-sym (symbol:find (symbol-name symbol) ns)))
     (restart-case
         (progn
           (when (and local-sym (not (eq symbol local-sym)))

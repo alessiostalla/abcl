@@ -80,7 +80,7 @@
     (let ((package (find-package package-designator)))
       (cond
         (package package)
-        (error (error "No package named ~S" (string package-designator)))
+        (error (let ((*print-readably* nil)) (print (sys:backtrace-as-list))) (error "No package named ~S" (string package-designator)))
         (t nil))))
   (defun find-symbol* (name package-designator &optional (error t))
     "Find a symbol in a package of given string'ified NAME;

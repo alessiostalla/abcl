@@ -3162,7 +3162,7 @@ public final class Primitives {
 
         @Override
         public LispObject execute(LispObject first) {
-            return checkSymbol(first).ensurePackage();
+            return checkSymbol(first).checkPackage();
         }
     }
     

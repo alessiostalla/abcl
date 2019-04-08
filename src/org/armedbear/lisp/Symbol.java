@@ -71,7 +71,7 @@ public class Symbol extends LispObject implements java.io.Serializable
         private final SimpleString NAME = new SimpleString("KEYWORD");
         private final Package packageView = new Package(this) {
             public String getName() {
-              return "KEYWORD"; //CL compatibility hack
+              return "KEYWORD"; //CL compatibility
             }
 
             public LispObject NAME() {
@@ -92,7 +92,7 @@ public class Symbol extends LispObject implements java.io.Serializable
 
       @Override
       public String printObject() {
-          return "";
+          return ":COMMON-LISP:SYMBOL:ROOT";
       }
 
       @Override
@@ -115,11 +115,20 @@ public class Symbol extends LispObject implements java.io.Serializable
             return NIL;
         }
 
+      @Override
+      public void setPackageView(Package pkg) {
+        if(packageView != pkg) {
+          error(new PackageError("Cannot change the package of the root symbol to ~A", pkg));
+        }
+      }
+
     };
-  public static final Symbol TOP_LEVEL_PACKAGES = ROOT_SYMBOL.ensurePackage().intern("TOP-LEVEL-PACKAGES");
-    static {
-        TOP_LEVEL_PACKAGES.ensurePackage().externalSymbols.put("KEYWORD", ROOT_SYMBOL);
-    }
+  public static final Symbol TOP_LEVEL_PACKAGES = ROOT_SYMBOL; //.ensurePackage().intern("TOP-LEVEL-PACKAGES");
+  static {
+    //Wire up the keyword package so that it's the same as the root package
+    Symbol keywordPackage = ROOT_SYMBOL.ensurePackage().internAndExport("KEYWORD");
+    keywordPackage.setPackageView(ROOT_SYMBOL.ensurePackage());
+  }
 
   private Package packageView;
 
@@ -3434,20 +3443,19 @@ public class Symbol extends LispObject implements java.io.Serializable
   //Hierarchical symbols
   public static final Symbol SYMBOL_AS_PACKAGE = SYMBOL.ensurePackage().internAndExport("PACKAGE");
   public static final Symbol SYMBOL_DEFINE_NAMESPACE = SYMBOL.ensurePackage().internAndExport("DEFINE-NAMESPACE");
-  public static final Symbol SYMBOL_FIND = SYMBOL.ensurePackage().internAndExport("find");
-  public static final Symbol SYMBOL_IMPORT = SYMBOL.ensurePackage().internAndExport("import");
-  public static final Symbol SYMBOL_INTERN = SYMBOL.ensurePackage().internAndExport("intern");
-  public static final Symbol SYMBOL_INTERN_HOOK = SYMBOL.ensurePackage().internAndExport("intern-hook");
-  public static final Symbol SYMBOL_PARENT = SYMBOL.ensurePackage().internAndExport("parent");
-  public static final Symbol SYMBOL_PROPERTY = SYMBOL.ensurePackage().internAndExport("property");
-  public static final Symbol SYMBOL_REMOVE_PROPERTY = SYMBOL.ensurePackage().internAndExport("remove-property");
-  public static final Symbol SYMBOL_ROOT = SYMBOL.ensurePackage().internAndExport("root");
+  public static final Symbol SYMBOL_FIND = SYMBOL.ensurePackage().internAndExport("FIND");
+  public static final Symbol SYMBOL_IMPORT = SYMBOL.ensurePackage().internAndExport("IMPORT");
+  public static final Symbol SYMBOL_INTERN = SYMBOL.ensurePackage().internAndExport("INTERN");
+  public static final Symbol SYMBOL_PARENT = SYMBOL.ensurePackage().internAndExport("PARENT");
+  public static final Symbol SYMBOL_PROPERTY = SYMBOL.ensurePackage().internAndExport("PROPERTY");
+  public static final Symbol SYMBOL_REMOVE_PROPERTY = SYMBOL.ensurePackage().internAndExport("REMOVE-PROPERTY");
+  public static final Symbol SYMBOL_ROOT = SYMBOL.ensurePackage().internAndExport("ROOT");
   static {
     SYMBOL_ROOT.initializeConstant(ROOT_SYMBOL);
     SYMBOL.ensurePackage();
     PACKAGE.ensurePackage();
   }
-  public static final Symbol PACKAGE_SYMBOL = PACKAGE.ensurePackage().internAndExport("symbol");
+  public static final Symbol PACKAGE_SYMBOL = PACKAGE.ensurePackage().internAndExport("SYMBOL");
 
   // JVM
   public static final Symbol _RESIGNAL_COMPILER_WARINGS_ =

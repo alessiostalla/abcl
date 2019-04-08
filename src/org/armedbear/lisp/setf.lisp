@@ -240,4 +240,4 @@
 (defsetf structure-ref structure-set)
 
 ;;Hierarchical symbols
-(defsetf symbol:|property| symbol::%set-property)
+(defsetf symbol:property symbol::%set-property)
