@@ -123,7 +123,8 @@ public class Symbol extends LispObject implements java.io.Serializable
       }
 
     };
-  public static final Symbol TOP_LEVEL_PACKAGES = ROOT_SYMBOL; //.ensurePackage().intern("TOP-LEVEL-PACKAGES");
+  /** Where Lisp packages reside. */
+  public static final Symbol PACKAGES = ROOT_SYMBOL;
   static {
     //Wire up the keyword package so that it's the same as the root package
     Symbol keywordPackage = ROOT_SYMBOL.ensurePackage().internAndExport("KEYWORD");
@@ -643,7 +644,7 @@ public class Symbol extends LispObject implements java.io.Serializable
     StringBuilder sb = new StringBuilder();
     if(parent == ROOT_SYMBOL) {
         sb.append(":");
-    } else if(parent != TOP_LEVEL_PACKAGES) {
+    } else if(parent != PACKAGES) {
         sb.append(parent.printObject());
         if (((Package) getPackage()).findExternalSymbol(canonicalName) != null
             && DOUBLE_COLON_PACKAGE_SEPARATORS.symbolValue(thread) == NIL) {
@@ -3465,7 +3466,7 @@ public class Symbol extends LispObject implements java.io.Serializable
     if(isPackage()) {
       return packageView;
     } else {
-      return (Package) error(new PackageError("Not a package: ~A", this));
+      return (Package) error(new PackageError("Not a package: " + getQualifiedName(), new SimpleString(getQualifiedName())));
     }
   }
 }

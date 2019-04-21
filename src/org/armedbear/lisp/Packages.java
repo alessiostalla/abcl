@@ -48,7 +48,7 @@ public final class Packages
 
   public static final synchronized Package createPackage(String name, int size)
   {
-    Symbol pkg = Symbol.TOP_LEVEL_PACKAGES.ensurePackage().intern(name);
+    Symbol pkg = Symbol.PACKAGES.ensurePackage().intern(name);
     return pkg.ensurePackage();
   }
 
@@ -67,7 +67,7 @@ public final class Packages
   // nicknames.
   static final synchronized Package findPackageGlobally(String name)
   {
-    Symbol pkg = Symbol.TOP_LEVEL_PACKAGES.ensurePackage().findAccessibleSymbol(name);
+    Symbol pkg = Symbol.PACKAGES.ensurePackage().findAccessibleSymbol(name);
     if(pkg == null || !pkg.isPackage()) {
       return null;
     }
@@ -77,7 +77,7 @@ public final class Packages
   public static final synchronized LispObject listAllTopLevelPackages()
   {
     LispObject result = NIL;
-    for (Symbol pkg : Symbol.TOP_LEVEL_PACKAGES.ensurePackage().getAccessibleSymbols()) {
+    for (Symbol pkg : Symbol.PACKAGES.ensurePackage().getAccessibleSymbols()) {
       if(pkg.isPackage()) {
         result = new Cons(pkg.ensurePackage(), result);
       }
@@ -88,7 +88,7 @@ public final class Packages
   public static final synchronized Package[] getAllTopLevelPackages()
   {
     List<Package> packages = new ArrayList<Package>();
-    for (Symbol pkg : Symbol.TOP_LEVEL_PACKAGES.ensurePackage().getAccessibleSymbols()) {
+    for (Symbol pkg : Symbol.PACKAGES.ensurePackage().getAccessibleSymbols()) {
       if(pkg.isPackage()) {
         packages.add(pkg.ensurePackage());
       }

@@ -41,11 +41,10 @@ import static org.armedbear.lisp.Symbol.SHADOWING_SYMBOLS;
 
 public class Package extends LispObject implements java.io.Serializable {
 
-  private Symbol symbol;
-  private boolean deleted;
+  private Symbol name;
   private LispObject nicknames = NIL; //Note: during bootstrap, NIL is still null
   /** Symbols internal to the package. */
-  protected transient final ConcurrentHashMap<String, Symbol> internalSymbols
+  private transient final ConcurrentHashMap<String, Symbol> internalSymbols
           = new ConcurrentHashMap<String, Symbol>(16);
   /** Symbols exported from the package.
    *
@@ -61,38 +60,39 @@ public class Package extends LispObject implements java.io.Serializable {
 
     // Anonymous package.
     public Package() {
-      symbol = new Symbol("");
+      name = new Symbol("");
     }
 
     public Package(String name) {
-      symbol = Symbol.TOP_LEVEL_PACKAGES.ensurePackage().intern(name);
+      this.name = Symbol.PACKAGES.ensurePackage().intern(name);
     }
 
-  public Package(Symbol symbol) {
-    if(symbol == null)
-      throw new NullPointerException("symbol must not be null");
-    this.symbol = symbol;
+  public Package(Symbol name) {
+    if(name == null) {
+      throw new NullPointerException("name must not be null");
+    }
+    this.name = name;
   }
 
     @Override
-    public LispObject typeOf()
-    {
+    public LispObject typeOf() {
         return Symbol.PACKAGE;
     }
 
     @Override
-    public LispObject classOf()
-    {
+    public LispObject classOf() {
         return BuiltInClass.PACKAGE;
     }
 
     @Override
-    public LispObject getDescription()
-    {
-      StringBuilder sb = new StringBuilder("The ");
-      sb.append(getName());
-      sb.append(" package");
-      return new SimpleString(sb);
+    public LispObject getDescription() {
+      if(name != null) {
+        StringBuilder sb = new StringBuilder("The ");
+        sb.append(getName());
+        sb.append(" package");
+        return new SimpleString(sb);
+      }
+      return new SimpleString("PACKAGE");
     }
 
     @Override
@@ -105,25 +105,29 @@ public class Package extends LispObject implements java.io.Serializable {
         return super.typep(type);
     }
 
+  public Symbol getSymbol() {
+    return name != null ? name : NIL;
+  }
+
     public String getName()
     {
-      return symbol.getName();
+      return name != null ? name.getName() : null;
     }
 
     public LispObject NAME() {
-        return deleted ? NIL : symbol.getSymbolName();
+      return name != null ? name.getSymbolName() : NIL;
     }
 
     @Override
     public final LispObject getPropertyList()
     {
-      return symbol.getPropertyList();
+      return name != null ? name.getPropertyList() : NIL;
     }
 
     @Override
     public final void setPropertyList(LispObject obj)
     {
-      symbol.setPropertyList(obj);
+      name.setPropertyList(obj);
     }
 
     public final LispObject getNicknames() {
@@ -138,7 +142,7 @@ public class Package extends LispObject implements java.io.Serializable {
     }
 
     public final synchronized boolean delete() {
-        if(!deleted) {
+        if(name != null) {
           if(getUseList() instanceof Cons) {
             LispObject usedPackages = getUseList();
             while (usedPackages != NIL) {
@@ -155,30 +159,30 @@ public class Package extends LispObject implements java.io.Serializable {
             }
           }
 
-          symbol.deletePackage();
+          name.deletePackage();
           while (nicknames != NIL) {
             Symbol pkg = (Symbol) nicknames.car();
             pkg.deletePackage();
             nicknames = nicknames.cdr();
           }
 
-          deleted = true;
+          name = null;
           return true;
         }
         return false;
     }
 
   public final void rename(String newName, LispObject newNicks) {
-    rename(Symbol.TOP_LEVEL_PACKAGES.ensurePackage().internAndExport(newName), newNicks);
+    rename(Symbol.PACKAGES.ensurePackage().internAndExport(newName), newNicks);
   }
 
     public final synchronized void rename(Symbol newName, LispObject newNicks) {
-      if(newName != symbol && newName.isPackage()) {
+      if(newName != name && newName.isPackage()) {
         error(new PackageError("Cannot rename package " + getName() + " to " + newName.getQualifiedName() + " as it is already a package", this));
         return;
       }
       delete();
-      symbol = newName;
+      name = newName;
       newName.setPackageView(this);
       while(newNicks != NIL) {
         LispObject nick = newNicks.car();
@@ -189,7 +193,6 @@ public class Package extends LispObject implements java.io.Serializable {
         }
         newNicks = newNicks.cdr();
       }
-      deleted = false;
     }
 
   public Symbol findInternalSymbol(SimpleString name)
@@ -252,7 +255,7 @@ public class Package extends LispObject implements java.io.Serializable {
     return getAccessibleName(symbol, new HashSet<Symbol>(), false);
   }
 
-  //TODO ALessio does not work
+  //TODO Alessio does not work
   protected String getAccessibleName(Symbol symbol, Set<Symbol> alreadySeen, boolean external) {
     List<String> localNames = getLocalNames(symbol);
     if(external) {
@@ -321,7 +324,7 @@ public class Package extends LispObject implements java.io.Serializable {
   //TODO Alessio there must be another way...
   public void addSymbol(Symbol symbol)
   {
-    Debug.assertTrue(symbol.getParent() == this.symbol);
+    Debug.assertTrue(symbol.getParent() == name);
     Debug.assertTrue(symbol.getName().equals("NIL"));
     externalSymbols.put(symbol.name.toString(), symbol);
   }
@@ -508,7 +511,7 @@ public class Package extends LispObject implements java.io.Serializable {
       shadowingSymbols.keySet().removeAll(symbolNames);
     }
 
-    if (symbol.getParent() == this.symbol) {
+    if (symbol.getParent() == this.name) {
       symbol.setParent(NIL);
     }
   }
@@ -544,13 +547,13 @@ public class Package extends LispObject implements java.io.Serializable {
       sb.append(", or ");
       sb.append(sym.getQualifiedName());
       sb.append(", is already accessible in package ");
-      sb.append(this.symbol.getQualifiedName());
+      sb.append(this.name.getQualifiedName());
       sb.append('.');
       error(new PackageError(sb.toString(), this));
     }
     internalSymbols.put(symbol.name.toString(), symbol);
     if (symbol.getParent() == NIL) {
-      symbol.setParent(this.symbol);
+      symbol.setParent(this.name);
     }
   }
 
@@ -576,7 +579,7 @@ public class Package extends LispObject implements java.io.Serializable {
       symbolName = localNames.get(0);
     }
     boolean added = false;
-    if (symbol.getParent() != this.symbol) {
+    if (symbol.getParent() != this.name) {
       Symbol sym = findAccessibleSymbol(symbolName);
       if (sym != symbol) {
         StringBuilder sb = new StringBuilder("The symbol ");
@@ -662,19 +665,6 @@ public class Package extends LispObject implements java.io.Serializable {
     symbol = new Symbol(s, this);
     internalSymbols.put(s.toString(), symbol);
     shadowingSymbols.put(symbolName, symbol);
-  }
-
-  protected static Symbol checkExistingSymbol(Symbol symbol, String name, ConcurrentHashMap<String, Symbol> internalSymbols) {
-    Symbol other = internalSymbols.get(name);
-    if(other != null) {
-      if (other == symbol) {
-        return symbol;
-      } else {
-        error(new PackageError("A symbol named " + name + " already exists.", new SimpleString(name))); //TODO Alessio distinguish alias package from alias symbol
-        return NIL;
-      }
-    }
-    return null;
   }
 
   public synchronized void shadowingImport(Symbol symbol)
@@ -914,7 +904,7 @@ public class Package extends LispObject implements java.io.Serializable {
   }
 
   public final void addNickname(String s) {
-    addNickname(Symbol.TOP_LEVEL_PACKAGES.ensurePackage().internAndExport(s));
+    addNickname(Symbol.PACKAGES.ensurePackage().internAndExport(s));
   }
 
     public final void addNickname(Symbol s)
@@ -977,10 +967,6 @@ public class Package extends LispObject implements java.io.Serializable {
       }
     }
 
-  public Symbol getSymbol() {
-    return symbol;
-  }
-
   public boolean equal(LispObject obj)
   {
     return equals(obj);
@@ -992,7 +978,7 @@ public class Package extends LispObject implements java.io.Serializable {
   }
 
   public boolean equals(Object obj) {
-    return obj instanceof Package && ((Package) obj).symbol == symbol;
+    return obj instanceof Package && ((name != null && ((Package) obj).name == name) || (name == null && obj == this));
   }
 
     public Object readResolve() throws java.io.ObjectStreamException {

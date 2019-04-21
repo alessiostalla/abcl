@@ -1178,7 +1178,7 @@ public class Stream extends StructureObject {
             } else {
               nextNamespace = namespace.ensurePackage().findAccessibleSymbol(symbolName);
               if(nextNamespace == null || !nextNamespace.isPackage()) {
-                nextNamespace = Symbol.TOP_LEVEL_PACKAGES.ensurePackage().findAccessibleSymbol(symbolName);
+                nextNamespace = Symbol.PACKAGES.ensurePackage().findAccessibleSymbol(symbolName);
                 if(nextNamespace == null || !nextNamespace.isPackage()) {
                   return error(new ReaderError(symbolName + " is not the name of a package."));
                 }

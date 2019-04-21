@@ -2264,7 +2264,7 @@ public final class Lisp
     public static final Package getCurrentPackageOrRoot() {
         Package currentPackage = getCurrentPackage(false);
         if(currentPackage == null) {
-            return Symbol.TOP_LEVEL_PACKAGES.ensurePackage();
+            return Symbol.PACKAGES.ensurePackage();
         } else {
             return currentPackage;
         }
