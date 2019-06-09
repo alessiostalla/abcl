@@ -376,7 +376,7 @@ public class Symbol extends LispObject implements java.io.Serializable
       return("#:".concat(n));
     if (parent == ROOT_SYMBOL)
       return ":".concat(n);
-    StringBuilder sb = new StringBuilder(parent.getName());
+    StringBuilder sb = new StringBuilder(parent.getQualifiedName());
     if (((Package) getPackage()).findExternalSymbol(name) != null)
       sb.append(':');
     else
@@ -573,6 +573,10 @@ public class Symbol extends LispObject implements java.io.Serializable
 
   @Override
   public String printObject() {
+    return printObject(false);
+  }
+
+  protected String printObject(boolean isPackageName) {
     String canonicalName;
       //Initially, with respect to the parent symbol, if any
     if(parent != NIL) {
@@ -607,9 +611,9 @@ public class Symbol extends LispObject implements java.io.Serializable
     }
     // Printer escaping is enabled.
     String accessibleName = null;
-      if(parent != ROOT_SYMBOL) { //Always print keywords as :<name-in-root-namespace> per ANSI standard
-          accessibleName = currentPackage.getAccessibleName(this);
-      }
+    if(parent != ROOT_SYMBOL) { //Always print keywords as :<name-in-root-namespace> per ANSI standard
+        accessibleName = currentPackage.getAccessibleName(this);
+    }
     if (accessibleName != null) {
         canonicalName = accessibleName;
     }
@@ -643,9 +647,11 @@ public class Symbol extends LispObject implements java.io.Serializable
     // Package prefix is necessary.
     StringBuilder sb = new StringBuilder();
     if(parent == ROOT_SYMBOL) {
+      if(!isPackageName) {
         sb.append(":");
-    } else if(parent != PACKAGES) {
-        sb.append(parent.printObject());
+      }
+    } else {
+        sb.append(parent.printObject(true));
         if (((Package) getPackage()).findExternalSymbol(canonicalName) != null
             && DOUBLE_COLON_PACKAGE_SEPARATORS.symbolValue(thread) == NIL) {
             sb.append(':');

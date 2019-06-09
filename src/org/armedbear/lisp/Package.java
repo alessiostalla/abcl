@@ -578,10 +578,15 @@ public class Package extends LispObject implements java.io.Serializable {
     if(symbolName == null) {
       symbolName = localNames.get(0);
     }
+    if (externalSymbols.get(symbolName.toString()) == symbol) {
+      // Symbol is already exported; there's nothing to do.
+      return;
+    }
+
     boolean added = false;
     if (symbol.getParent() != this.name) {
       Symbol sym = findAccessibleSymbol(symbolName);
-      if (sym != symbol) {
+      if (sym != null && sym != symbol) {
         StringBuilder sb = new StringBuilder("The symbol ");
         sb.append(symbol.getQualifiedName());
         sb.append(" is not accessible in package ");
@@ -598,7 +603,7 @@ public class Package extends LispObject implements java.io.Serializable {
         for (Package pkg : getUsedBy()) {
           Symbol sym = pkg.findAccessibleSymbol(symbolName);
           if (sym != null && sym != symbol) {
-            if (shadowingSymbols != null && shadowingSymbols.get(symbolName) == sym) {
+            if (pkg.shadowingSymbols != null && pkg.shadowingSymbols.get(symbolName) == sym) {
               // OK.
             } else {
               StringBuilder sb = new StringBuilder("The symbol ");
@@ -617,9 +622,6 @@ public class Package extends LispObject implements java.io.Serializable {
       externalSymbols.put(symbolName.toString(), symbol);
       return;
     }
-    if (externalSymbols.get(symbolName.toString()) == symbol)
-      // Symbol is already exported; there's nothing to do.
-      return;
     StringBuilder sb = new StringBuilder("The symbol ");
     sb.append(symbol.getQualifiedName());
     sb.append(" is not accessible in package ");
@@ -775,8 +777,8 @@ public class Package extends LispObject implements java.io.Serializable {
     LispObject list = NIL;
     if (getUsedBy() != null) {
       for (Iterator it = getUsedBy().iterator(); it.hasNext();) {
-        Symbol pkg = (Symbol) it.next();
-        list = new Cons(pkg.ensurePackage(), list);
+        Package pkg = (Package) it.next();
+        list = new Cons(pkg, list);
       }
     }
     return list;
