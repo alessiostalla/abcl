@@ -577,48 +577,28 @@ public class Symbol extends LispObject implements java.io.Serializable
   }
 
   protected String printObject(boolean isPackageName) {
-    String canonicalName;
-      //Initially, with respect to the parent symbol, if any
-    if(parent != NIL) {
-        List<String> localNames = ((Package) getPackage()).getLocalNames(this);
-        canonicalName = localNames.isEmpty() ? this.name.getStringValue() : localNames.get(0);
-    } else {
-        canonicalName = this.name.getStringValue();
-    }
+    String symbolName = this.name.getStringValue();
     final LispThread thread = LispThread.currentThread();
     boolean printEscape = (PRINT_ESCAPE.symbolValue(thread) != NIL);
     LispObject printCase = PRINT_CASE.symbolValue(thread);
     final LispObject readtableCase =
-      ((Readtable)CURRENT_READTABLE.symbolValue(thread)).getReadtableCase();
+            ((Readtable) CURRENT_READTABLE.symbolValue(thread)).getReadtableCase();
     boolean printReadably = (PRINT_READABLY.symbolValue(thread) != NIL);
-      final Package currentPackage = getCurrentPackage(false);
-      if(currentPackage == null) {
-          //Safe fallback
-          printReadably = true;
-      }
+    final Package currentPackage = getCurrentPackage(false);
+    if (currentPackage == null) {
+      //Safe fallback
+      printReadably = true;
+    }
 
     if (printReadably) {
-        String s = printReadably(canonicalName, currentPackage);
-        return s;
+      return printReadably(symbolName, currentPackage);
     }
-      List<String> localNames = currentPackage.getLocalNames(this);
-      if(!localNames.isEmpty()) {
-          canonicalName = localNames.get(0);
-      }
     if (!printEscape) {
-        String s = printNotEscaped(canonicalName, printCase, readtableCase);
-        return s;
+      return printNotEscaped(symbolName, printCase, readtableCase);
     }
     // Printer escaping is enabled.
-    String accessibleName = null;
-    if(parent != ROOT_SYMBOL) { //Always print keywords as :<name-in-root-namespace> per ANSI standard
-        accessibleName = currentPackage.getAccessibleName(this);
-    }
-    if (accessibleName != null) {
-        canonicalName = accessibleName;
-    }
-    final boolean escapeSymbolName = needsEscape(canonicalName, readtableCase, thread);
-    String escapedName = escapeSymbolName ? multipleEscape(canonicalName) : canonicalName;
+    final boolean escapeSymbolName = needsEscape(symbolName, readtableCase, thread);
+    String escapedName = escapeSymbolName ? multipleEscape(symbolName) : symbolName;
     if (!escapeSymbolName) {
       if (readtableCase == Keyword.PRESERVE) {
         // nothing to do
@@ -629,48 +609,48 @@ public class Symbol extends LispObject implements java.io.Serializable
       } else if (printCase == Keyword.UPCASE) {
         escapedName = escapedName.toUpperCase();
       } else if (printCase == Keyword.CAPITALIZE) {
-          escapedName = capitalize(escapedName, readtableCase);
+        escapedName = capitalize(escapedName, readtableCase);
       }
     }
-    if (parent == NIL) {
+    if (!parent.isPackage()) {
       if (PRINT_GENSYM.symbolValue(thread) != NIL) {
         return "#:".concat(escapedName);
       } else {
-          return escapedName;
+        return escapedName;
       }
     }
     // "Package prefixes are printed if necessary." (22.1.3.3.1)
     // Here we also use a package-local nickname if appropriate.
-    if (accessibleName != null) {
-        return escapedName;
+    if (getPackage() == currentPackage || currentPackage.findAccessibleSymbol(symbolName) == this) {
+      return escapedName;
     }
     // Package prefix is necessary.
     StringBuilder sb = new StringBuilder();
-    if(parent == ROOT_SYMBOL) {
-      if(!isPackageName) {
+    if (parent == ROOT_SYMBOL) {
+      if (!isPackageName) {
         sb.append(":");
       }
     } else {
+      if (currentPackage.getLocallyNicknamedPackages().contains(getPackage())) {
+        LispObject nicknames = currentPackage.getLocalPackageNicknames();
+        while (nicknames != NIL) {
+          if (nicknames.car().cdr() == getPackage()) {
+            sb.append(javaString(nicknames.car().car()));
+            break;
+          } else {
+            nicknames = nicknames.cdr();
+          }
+        }
+      } else {
         sb.append(parent.printObject(true));
-        if (((Package) getPackage()).findExternalSymbol(canonicalName) != null
-            && DOUBLE_COLON_PACKAGE_SEPARATORS.symbolValue(thread) == NIL) {
-            sb.append(':');
-        } else {
-            sb.append("::");
-        }
-    }
-    //TODO Alessio verify that local nicknames work
-    /*if (currentPackage.getLocallyNicknamedPackages().contains(parent.ensurePackage())) {
-      LispObject nicknames = currentPackage.getLocalPackageNicknames();
-      while (nicknames != NIL) {
-        if (nicknames.car().cdr() == parent) {
-          packageName = javaString(nicknames.car().car());
-          nicknames = NIL;
-        } else {
-          nicknames = nicknames.cdr();
-        }
       }
-    }*/
+      if (((Package) getPackage()).findExternalSymbol(symbolName) != null
+              && DOUBLE_COLON_PACKAGE_SEPARATORS.symbolValue(thread) == NIL) {
+        sb.append(':');
+      } else {
+        sb.append("::");
+      }
+    }
     sb.append(escapedName);
     return sb.toString();
   }

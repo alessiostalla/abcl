@@ -158,6 +158,13 @@ public class Package extends LispObject implements java.io.Serializable {
             }
           }
 
+          LispObject packages = Packages.getPackagesNicknamingPackage(this);
+          while (packages != NIL) {
+            Package p = (Package) packages.car();
+            packages = packages.cdr();
+            p.removeLocalPackageNicknamesForPackage(this);
+          }
+
           name.deletePackage();
           while (nicknames != NIL) {
             Symbol pkg = (Symbol) nicknames.car();
@@ -243,48 +250,6 @@ public class Package extends LispObject implements java.io.Serializable {
         symbol = pkg.findExternalSymbol(name);
         if (symbol != null)
           return symbol;
-        usedPackages = usedPackages.cdr();
-      }
-    }
-    // Not found.
-    return null;
-  }
-
-  public String getAccessibleName(Symbol symbol) {
-    return getAccessibleName(symbol, new HashSet<Symbol>(), false);
-  }
-
-  //TODO Alessio does not work
-  protected String getAccessibleName(Symbol symbol, Set<Symbol> alreadySeen, boolean external) {
-    List<String> localNames = getLocalNames(symbol);
-    if(external) {
-      for(String localName : localNames) {
-        if(externalSymbols.containsKey(localName)) {
-          return localName;
-        }
-      }
-    } else if(!localNames.isEmpty()) {
-      return localNames.get(0);
-    }
-    // Look in external symbols of used packages.
-    LispObject usedPackages = getUseList();
-    if (usedPackages instanceof Cons) {
-      while (usedPackages != NIL) {
-        Package pkg = checkPackage(usedPackages.car());
-        if(!alreadySeen.contains(pkg.getSymbol())) {
-          alreadySeen.add(pkg.getSymbol());
-          String accessibleName = pkg.getAccessibleName(symbol, alreadySeen, true);
-          if(accessibleName != null) {
-            Symbol other = internalSymbols.get(accessibleName);
-            if(other == null || other == symbol) {
-              return accessibleName;
-            }
-            other = externalSymbols.get(accessibleName);
-            if(other == null || other == symbol) {
-              return accessibleName;
-            }
-          }
-        }
         usedPackages = usedPackages.cdr();
       }
     }

@@ -150,8 +150,7 @@ zero-length jvm classfile corresponding to ~A." classfile)
 
 (defun finalize-fasl-output ()
   (when *binary-fasls*
-    (let ((*package* (find-package :keyword))
-          (*print-readably* t))
+    (let ((*package* (find-package :keyword)))
       (dump-form (convert-toplevel-form (list* 'PROGN
                                                (nreverse *forms-for-output*))
                                         t)
