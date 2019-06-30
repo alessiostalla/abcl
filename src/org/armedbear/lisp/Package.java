@@ -56,7 +56,6 @@ public class Package extends LispObject implements java.io.Serializable {
   private transient HashMap<String,Symbol> shadowingSymbols;
   private transient LispObject useList = null;
   private transient List<Package> usedByList = null;
-  private transient ConcurrentHashMap<String, Package> localNicknames;
 
     // Anonymous package.
     public Package() {
@@ -526,16 +525,6 @@ public class Package extends LispObject implements java.io.Serializable {
     if (findAccessibleSymbol(symbol.getName()) == symbol) {
       symbolNames.add(symbol.getName());
     }
-
-        /*        Map<Symbol, List<String>> aliases = symbol.getAliases();
-        if (aliases != null) {
-            List<String> names = aliases.get(this);
-            if(names != null) {
-                for (String alias : names) {
-                    symbolNames.add(alias);
-                }
-            }
-            }*/
     return symbolNames;
   }
 
@@ -784,24 +773,6 @@ public class Package extends LispObject implements java.io.Serializable {
     return list;
   }
 
-  public LispObject getLocalPackageNicknames() {
-    LispObject list = NIL;
-    for(Map.Entry<String, Symbol> entry : internalSymbols.entrySet()) {
-      Symbol symbol = entry.getValue();
-      if(symbol.isPackage() && !entry.getKey().equals(symbol.getName())) {
-        list = new Cons(new Cons(entry.getKey(), symbol), list);
-      }
-    }
-    for (Map.Entry<String, Symbol> entry : externalSymbols.entrySet()) {
-      Symbol symbol = entry.getValue();
-      if (symbol.isPackage() && !entry.getKey().equals(symbol.getName())) {
-        list = new Cons(new Cons(entry.getKey(), symbol), list);
-      }
-    }
-    return list;
-  }
-
-
   public LispObject getShadowingSymbols()
   {
     LispObject list = NIL;
@@ -927,33 +898,69 @@ public class Package extends LispObject implements java.io.Serializable {
       return nicknames;
     }
 
-  public LispObject addLocalPackageNickname(String name, Package pack)
-  {
-    return NIL; //TODO
-  }
-
-  public LispObject removeLocalPackageNickname(String name)
-  {
-    return NIL; //TODO
-  }
-
-  public void removeLocalPackageNicknamesForPackage(Package p)
-  {
-    //TODO
-  }
-
-    public Collection<Package> getLocallyNicknamedPackages() {
-      //TODO
-      return null;
+    public LispObject getLocalPackageNicknames() {
+      Symbol[] symbols = symbols();
+      LispObject nicks = NIL;
+      for(Symbol symbol : symbols) {
+        if(isLocalNickname(symbol)) {
+          nicks = new Cons(new Cons(symbol.getSymbolName(), symbol.ensurePackage()), nicks);
+        }
+      }
+      return nicks;
     }
 
+  public LispObject addLocalPackageNickname(String name, Package pack) {
+    Symbol symbol = intern(name);
+    if(symbol.isPackage() && symbol.ensurePackage() != pack) {
+      return error(new LispError(name + " is already a nickname for " + pack.getName()));
+    }
+    symbol.setPackageView(pack);
+    return this;
+  }
+
+  public LispObject removeLocalPackageNickname(String name) {
+    LispObject symbol = findSymbol(name);
+    if (symbol == NIL || !isLocalNickname((Symbol) symbol)) {
+      return NIL;
+    } else {
+      Package pkg = ((Symbol) symbol).ensurePackage();
+      // return generalized boolean: package that was nicknamed to `name'
+      ((Symbol) symbol).setPackageView(null);
+      return pkg;
+    }
+  }
+
+  public void removeLocalPackageNicknamesForPackage(Package p) {
+    Symbol[] symbols = symbols();
+    for(Symbol symbol : symbols) {
+      if(isLocalNickname(symbol) && symbol.ensurePackage() == p) {
+        symbol.setPackageView(null);
+      }
+    }
+  }
+
+  public boolean isLocalNickname(Symbol symbol) {
+    return symbol.isPackage() && symbol.ensurePackage().getSymbol() != symbol;
+  }
+
+  public Collection<Package> getLocallyNicknamedPackages() {
+    List<Package> pkgs = new ArrayList<Package>();
+    Symbol[] symbols = symbols();
+    for(Symbol symbol : symbols) {
+      if(isLocalNickname(symbol)) {
+        pkgs.add(symbol.ensurePackage());
+      }
+    }
+    return pkgs;
+  }
+
     public Package findPackage(String name) {
-        // Find package named `name', taking local nicknames into account
-        Symbol symbol = findAccessibleSymbol(name);
-        if (symbol != null && symbol.isPackage()) {
-            return symbol.ensurePackage();
-        }
-        return Packages.findPackageGlobally(name);
+      // Find package named `name', taking local nicknames into account
+      Symbol symbol = findAccessibleSymbol(name);
+      if (symbol != null && symbol.isPackage()) {
+        return symbol.ensurePackage();
+      }
+      return Packages.findPackageGlobally(name);
     }
 
     @Override

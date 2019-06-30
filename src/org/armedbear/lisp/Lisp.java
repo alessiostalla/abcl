@@ -1868,7 +1868,7 @@ public final class Lisp
     Package pkg = namespace.findPackage(name);
     if (pkg != null)
       return pkg;
-    error(new PackageError(obj.princToString() + " is not the name of a package. Search namespace: " + namespace.princToString()), obj);
+    error(new PackageError(obj.princToString() + " is not the name of a package. Search namespace: " + namespace.princToString(), obj));
     // Not reached.
     return null;
   }

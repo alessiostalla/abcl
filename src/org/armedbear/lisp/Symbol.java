@@ -3237,8 +3237,6 @@ public class Symbol extends LispObject implements java.io.Serializable
     PACKAGE_JAVA.addExternalSymbol("ADD-TO-CLASSPATH");
 
   // External symbols in SYSTEM package.
-  public static final Symbol ALIASES =
-    PACKAGE_SYS.addInternalSymbol("ALIASES");
   public static final Symbol AUTOCOMPILE =
     PACKAGE_SYS.addExternalSymbol("AUTOCOMPILE");
   public static final Symbol CLASS_BYTES =
