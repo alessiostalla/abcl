@@ -807,7 +807,6 @@ interpreted toplevel form, non-NIL if it is 'simple enough'."
               (*read-default-float-format* *read-default-float-format*)
               (*read-base* *read-base*)
               (*package* *package*)
-              (*print-readably* t)
               (jvm::*functions-defined-in-current-file* '())
               (*fbound-names* '())
               (*fasl-stream* out)

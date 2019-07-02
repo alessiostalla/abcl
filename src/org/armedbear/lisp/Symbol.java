@@ -621,16 +621,16 @@ public class Symbol extends LispObject implements java.io.Serializable
     }
     // "Package prefixes are printed if necessary." (22.1.3.3.1)
     // Here we also use a package-local nickname if appropriate.
-    if (getPackage() == currentPackage || currentPackage.findAccessibleSymbol(symbolName) == this) {
-      return escapedName;
-    }
-    // Package prefix is necessary.
     StringBuilder sb = new StringBuilder();
     if (parent == ROOT_SYMBOL) {
       if (!isPackageName) {
         sb.append(":");
       }
     } else {
+      if (getPackage() == currentPackage || currentPackage.findAccessibleSymbol(symbolName) == this) {
+        return escapedName;
+      }
+      // Package prefix is necessary.
       if (currentPackage.getLocallyNicknamedPackages().contains(getPackage())) {
         LispObject nicknames = currentPackage.getLocalPackageNicknames();
         while (nicknames != NIL) {

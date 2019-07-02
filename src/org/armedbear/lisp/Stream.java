@@ -1166,6 +1166,7 @@ public class Stream extends StructureObject {
                 internNextSymbol = false;
             } else { //No colon
                 symbolName = token;
+                packageFlags = flags;
             }
         }
         if (invert) {
