@@ -34,3 +34,19 @@
       (fmakunbound 'f)
       (funcall (java:jcall "readObject" i) T))
   '(3 . T))
+
+(defun ff (x)
+  (labels ((g (y) (if (> y x) (cons x y) (h (1+ y))))
+  		   (h (z) (g z)))
+    (let* ((b (jnew "java.io.ByteArrayOutputStream"))
+           (o (jnew "java.io.ObjectOutputStream" b)))
+      (jcall "writeObject" o #'g)
+      (jcall "flush" o)
+      (jcall "toByteArray" b))))
+
+(deftest serialization-of-mutually-recursive-closures
+    (let* ((b (java:jnew "java.io.ByteArrayInputStream" (ff 10)))
+    	   (i (java:jnew "java.io.ObjectInputStream" b)))
+      (fmakunbound 'ff)
+      (funcall (java:jcall "readObject" i) 3))
+  '(10 . 11))
